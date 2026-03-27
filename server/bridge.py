@@ -76,6 +76,9 @@ class MachineBridge:
         # Watchdog: tracks which axes each client is continuously jogging.
         # client_id -> set of axis indices.  Used to stop jogs on disconnect.
         self._client_jogs: Dict[int, set] = {}
+        # Last serialised state frame — sent immediately to newly connected clients
+        # so they see the current machine state without waiting for the next poll tick.
+        self._last_state_json: str | None = None
         # Mock mode machine state — starts in e-stop, stationary at origin
         self._mock = {
             "task_state": 1,   # 1=ESTOP 2=ESTOP_RESET 3=OFF 4=ON
@@ -431,6 +434,8 @@ class MachineBridge:
                             m["g5x_offsets"][p][ai] = pos[ai] - float(am.group(2))
 
         elif op == "program_open":
+            if m.get("program_running"):
+                return {"ok": False, "error": "program is running — stop it first"}
             path = str(msg.get("path", ""))
             m["program_file"]    = path
             m["program_line"]    = 0
@@ -514,6 +519,9 @@ class MachineBridge:
             c.mdi(str(msg["gcode"]))
 
         elif op == "program_open":
+            self._stat.poll()
+            if self._stat.interp_state == 2:  # INTERP_READING
+                return {"ok": False, "error": "program is running — stop it first"}
             c.program_open(str(msg["path"]))
 
         elif op == "program_run":
@@ -590,6 +598,24 @@ class MachineBridge:
     # Push loop — called as a background asyncio task
     # ------------------------------------------------------------------
 
+    def is_program_running(self) -> bool:
+        """Return True if a program is currently executing (mock or real)."""
+        if not HAS_LINUXCNC or self._stat is None:
+            return bool(self._mock.get("program_running"))
+        try:
+            self._stat.poll()
+            return self._stat.interp_state == 2  # INTERP_READING
+        except Exception:
+            return False
+
+    def push_initial_state(self, client_id: int) -> None:
+        """Push the last known state frame immediately to a newly connected client."""
+        if self._last_state_json and client_id in self.clients:
+            try:
+                self.clients[client_id].put_nowait(self._last_state_json)
+            except asyncio.QueueFull:
+                pass
+
     async def poll_loop(self):
         """Push state to all connected clients at 20Hz."""
         while True:
@@ -597,6 +623,7 @@ class MachineBridge:
                 state = self.build_state()
                 if state:
                     msg = json.dumps(state)
+                    self._last_state_json = msg
                     for client_id, queue in list(self.clients.items()):
                         try:
                             # Drop frame if client queue is full (slow client)

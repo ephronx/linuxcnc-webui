@@ -8,7 +8,7 @@
  *   - Show/hide the drop zone based on whether a file is loaded
  */
 
-import { send } from "./ws.js";
+import { send, onMessage } from "./ws.js";
 import { state, onUpdate } from "./state.js";
 import { loadGcodeText } from "./viewer.js";
 
@@ -134,6 +134,13 @@ async function _upload(file) {
     return;
   }
 
+  // Guard: reject if a program is currently executing
+  const interp = state.machine?.interp_state ?? 1;
+  if (interp === 2) {  // INTERP_READING
+    _setStatus("Cannot load a new file while a program is running — stop it first", true);
+    return;
+  }
+
   _loadedPath = result.path;
   _setStatus(`Loaded: ${result.filename}  (${_humanSize(result.size)})`);
 
@@ -241,6 +248,14 @@ onUpdate((s) => {
   const line = prog.motion_line || prog.line || 0;
   if (programLine) programLine.textContent = line ? `line ${line}` : "—";
   _setActiveLine(line);
+});
+
+// ---- Surface server-side command rejections ----
+
+onMessage((frame) => {
+  if (frame.type === "ack" && frame.cmd === "program_open" && frame.ok === false) {
+    _setStatus(`Cannot open program: ${frame.error}`, true);
+  }
 });
 
 // ---- Auto-scroll toggle (click line numbers area to pause scroll) ----

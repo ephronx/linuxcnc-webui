@@ -83,7 +83,9 @@ async def get_config():
 @app.post("/upload")
 async def upload_gcode(file: UploadFile = File(...)):
     """
-    Accept a G-code file upload, save it to UPLOAD_DIR, and open it in LinuxCNC.
+    Accept a G-code file upload and save it to UPLOAD_DIR.
+    The frontend sends a 'program_open' command over WebSocket after this
+    returns, which is where the running-program guard is enforced.
     Returns {"path": "/absolute/path/to/file"} on success.
     """
     suffix = Path(file.filename).suffix.lower()
@@ -94,9 +96,6 @@ async def upload_gcode(file: UploadFile = File(...)):
     contents = await file.read()
     dest.write_bytes(contents)
     log.info(f"Uploaded {file.filename} → {dest}")
-
-    # Open immediately in LinuxCNC
-    bridge.handle_command({"cmd": "program_open", "path": str(dest)})
 
     return {"path": str(dest), "filename": file.filename, "size": len(contents)}
 
@@ -123,6 +122,9 @@ async def websocket_endpoint(websocket: WebSocket):
     client_id = id(websocket)
     queue: asyncio.Queue = asyncio.Queue(maxsize=5)
     bridge.clients[client_id] = queue
+    # Send the last known state immediately so the new client doesn't show
+    # stale/default UI while waiting for the next poll tick.
+    bridge.push_initial_state(client_id)
     log.info(f"Client {client_id} connected  (total: {len(bridge.clients)})")
 
     async def sender():

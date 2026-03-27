@@ -12,6 +12,8 @@
  */
 
 import { state, config, onUpdate } from "./state.js";
+import { onConnect } from "./ws.js";
+import { switchTab } from "./tabs.js";
 
 // LinuxCNC task_state constants
 const STATE_ESTOP       = 1;
@@ -217,11 +219,28 @@ function _statusHint(s) {
   // lv === 3, mode MANUAL or program running: let dro.js manage the status bar content
 }
 
+// ---- Auto-tab on connect ----
+// When a client connects (or reconnects), switch to the Auto tab automatically
+// if the machine is already running or paused — so the new client sees the
+// active job instead of an empty Manual tab.
+
+let _justConnected = false;
+onConnect(() => { _justConnected = true; });
+
 // ---- Register ----
 
 onUpdate((s) => {
   _applyGates(s);
   _statusHint(s);
+
+  if (_justConnected && s.connected) {
+    _justConnected = false;
+    const mode   = s.machine?.mode ?? MODE_MANUAL;
+    const interp = s.machine?.interp_state ?? INTERP_IDLE;
+    if (mode === MODE_AUTO || interp === INTERP_READING || interp === INTERP_PAUSED) {
+      switchTab("auto");
+    }
+  }
 });
 
 // Apply gates immediately on load with the default disconnected state
