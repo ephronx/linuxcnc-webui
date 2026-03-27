@@ -545,8 +545,8 @@ function _drawBounds2D() {
   const br = _w2c(b.maxU, b.minV);
   ctx.save();
   ctx.setLineDash([6, 4]);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = C.borderHi;
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = C.textSec;
   ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
   ctx.restore();
 
@@ -667,8 +667,8 @@ function _drawBounds3D() {
 
   ctx.save();
   ctx.setLineDash([4, 4]);
-  ctx.lineWidth = 0.8;
-  ctx.strokeStyle = C.borderHi;
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = C.textSec;
   ctx.beginPath();
   for (const [a, b] of edges) {
     ctx.moveTo(c[a].sx, c[a].sy);

@@ -267,6 +267,45 @@ Get the data flowing and commands working. UI can be ugly.
 
 ---
 
+### Phase 11 — Multi-machine-type support
+
+LinuxCNC's HAL is machine-agnostic — the same bridge works for mills, lathes, routers, plasma tables, etc.
+The UI detects machine type from the INI/config at startup and adjusts rendering and layout accordingly.
+
+**`machine_type` field** — add to the config bundle pushed at startup:
+
+```json
+{ "machine_type": "mill" }   // "mill" | "lathe" | "router" | "plasma" | "unknown"
+```
+
+Read from INI `[DISPLAY] MACHINE_TYPE` or `[TRAJ] COORDINATES` (XZ only → assume lathe if not overridden).
+
+#### Lathe mode
+
+- [ ] XZ-only toolpath view (viewer already has XZ plane — just lock it and hide YZ/3D presets)
+- [ ] Diameter mode (G7) vs radius mode (G8) — DRO X shows diameter when G7 active
+- [ ] DRO layout: X (diameter/radius), Z only — suppress Y
+- [ ] Lathe-specific jog panel: X+/X–/Z+/Z– cardinal buttons, no Y
+- [ ] Tool table: nose radius, orientation code (front/rear/boring), not just length/diameter
+- [ ] Spindle display shows CSS (constant surface speed) when active (G96)
+- [ ] Chuck/tailstock indicators (HAL pins) if configured
+
+#### Mill / router mode (current default)
+
+- [ ] No changes needed — mill is the baseline
+
+#### Plasma / cutting mode (future)
+
+- [ ] THC (torch height control) status from HAL
+- [ ] Pierce delay / cut height fields
+- [ ] No Z jog (THC owns Z)
+
+#### Design rule
+All machine-type branches live in the frontend only — the bridge and HAL layer are unchanged.
+A `machine_type` check at render time switches layouts, hides/shows controls, and adjusts DRO formatting.
+
+---
+
 ## State JSON Bundle (design)
 
 What the server pushes every 50ms:
