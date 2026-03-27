@@ -99,6 +99,37 @@ linuxcnc-webui/
 
 ---
 
+## Next Sprint — HMI Research Findings (starting 2026-03-28)
+
+> Driven by ISA-101/ISO 9241 standards review, competitor analysis (PathPilot, Sinumerik, Heidenhain),
+> and operator complaint synthesis. See `hmi_research.md` for full detail.
+> QtDragon screenshots to be reviewed morning of 2026-03-28 before work begins.
+
+### High priority
+
+- [ ] **Persistent DRO panel** — DRO + key status controls must remain visible on all tabs (PathPilot model). Structural layout change: split page into fixed bottom strip (Tier 1) + tabbed upper area (Tier 2/3). Biggest gap vs ISA-101 and operator expectations.
+- [ ] **Actual vs commanded spindle RPM** — display both; commanded = what operator set, actual = confirms spindle is at speed
+- [ ] **Distance-to-go (DTG)** — third DRO row alongside Absolute and Machine positions
+- [ ] **Modal G-codes display** — show currently active G17/18/19, G90/91, G94/95, G40/41/42
+- [ ] **Offset change log** — record previous value + timestamp when tool or work offset is changed; confirm dialog for changes >5mm
+- [ ] **Alarm priority** — distinguish P1 (critical) from P4 (advisory); flash until acknowledged then go steady
+
+### Medium priority
+
+- [ ] **Red colour audit** — reserve red exclusively for faults/alarms; remove from any normal operating states (per ISA-101)
+- [ ] **Grey-industrial theme** — ISA-101 recommends ~#DDDDDD background for bright shop environments where dark themes wash out under overhead fluorescent lighting; add as selectable alternative to dark theme
+- [ ] **Undo on offset entry** — log and restore previous value; currently no undo when editing tool or work offsets
+- [ ] **Probe tab** — edge find, bore centre, corner find at minimum; Probe Basic's deep probing is consistently cited as the biggest differentiator vs QtDragon
+
+### Lower priority / future sprints
+
+- [ ] **Macro buttons tab** — quick-access MDI sequences without loading into main program; most-requested PathPilot feature
+- [ ] **Physical encoder/MPG integration** — consume USB HID encoder events for feed/spindle override; software sliders are dangerous (can jump 5% to 100% accidentally)
+- [ ] **Conversational CAM** — valued for one-off work; Mazak/PathPilot pattern
+- [ ] **Configurable dashboard** — let operator pin Tier 1 data items to persistent panel
+
+---
+
 ## Build Phases
 
 ### Phase 1 — Server bridge + bare-bones UI ✅ COMPLETE
