@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinuxCNC</title>
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/layout.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header id="header">
+    <span class="machine-name" id="machine-name">LinuxCNC</span>
+
+    <div id="status-badges">
+      <span class="status-badge estop" id="badge-estop">E-STOP</span>
+      <span class="status-badge" id="badge-state">OFF</span>
+      <span class="status-badge mode" id="badge-mode">MANUAL</span>
+      <span class="status-badge homed" id="badge-homed" style="display:none">HOMED</span>
+    </div>
+
+    <button class="btn btn-danger" id="btn-estop">⬡ E-STOP</button>
+
+    <div id="conn-indicator">
+      <span class="led" id="conn-led"></span>
+      <span id="conn-text">connecting…</span>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       BODY
+       ============================================================ -->
+  <div id="body">
+
+    <!-- ---- Left panel: machine control + jog ---- -->
+    <aside id="panel-left">
+
+      <div class="panel-section">
+        <div class="section-title">Machine</div>
+        <div class="btn-grid btn-grid-2">
+          <button class="btn btn-success" id="btn-machine-on">Power On</button>
+          <button class="btn btn-default" id="btn-machine-off">Power Off</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Homing</div>
+        <div class="btn-grid btn-grid-2">
+          <button class="btn btn-primary" id="btn-home-all">Home All</button>
+          <button class="btn btn-warn" id="btn-unhome-all">Unhome</button>
+        </div>
+      </div>
+
+      <!-- ---- Jog controls (moved from Manual tab) ---- -->
+      <div class="panel-section" id="jog-panel">
+        <div class="section-title">Jog</div>
+
+        <div style="display:flex; gap:var(--gap-sm); align-items:center; margin-bottom:var(--gap-sm); flex-wrap:wrap">
+          <span class="dim" style="font-size:0.65rem; white-space:nowrap">Inc</span>
+          <div class="btn-grid" style="grid-template-columns:repeat(5,1fr); gap:3px; flex:1" id="jog-increment-btns">
+            <button class="btn btn-default jog-inc-btn active" data-inc="0" title="Continuous">Cont</button>
+            <button class="btn btn-default jog-inc-btn" data-inc="0.001">0.001</button>
+            <button class="btn btn-default jog-inc-btn" data-inc="0.01">0.01</button>
+            <button class="btn btn-default jog-inc-btn" data-inc="0.1">0.1</button>
+            <button class="btn btn-default jog-inc-btn" data-inc="1">1</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:var(--gap-sm); align-items:center; margin-bottom:var(--gap-sm)">
+          <span class="dim" style="font-size:0.65rem">Vel</span>
+          <input type="range" id="jog-velocity" min="0.01" max="1" step="0.01" value="0.5" style="flex:1">
+          <span class="override-value" id="jog-velocity-val" style="min-width:2.2rem">50%</span>
+        </div>
+
+        <!-- XY jog grid -->
+        <div class="jog-grid" id="jog-xy">
+          <div></div>
+          <button class="btn btn-default jog-btn" data-axis="1" data-dir="1">Y+</button>
+          <div></div>
+          <button class="btn btn-default jog-btn" data-axis="0" data-dir="-1">X−</button>
+          <div></div>
+          <button class="btn btn-default jog-btn" data-axis="0" data-dir="1">X+</button>
+          <div></div>
+          <button class="btn btn-default jog-btn" data-axis="1" data-dir="-1">Y−</button>
+          <div></div>
+        </div>
+
+        <!-- Z jog buttons -->
+        <div style="display:flex; gap:var(--gap-sm); margin-top:var(--gap-sm); justify-content:center">
+          <button class="btn btn-default jog-btn" data-axis="2" data-dir="1" style="flex:1">Z+</button>
+          <button class="btn btn-default jog-btn" data-axis="2" data-dir="-1" style="flex:1">Z−</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Spindle</div>
+        <div class="override-row">
+          <span class="override-label">Speed</span>
+          <input type="range" id="spindle-override" min="0" max="2" step="0.01" value="1">
+          <span class="override-value" id="spindle-override-val">100%</span>
+        </div>
+        <div class="btn-grid btn-grid-2" style="margin-top: var(--gap-sm)">
+          <button class="btn btn-primary" id="btn-spindle-on">▶ CW</button>
+          <button class="btn btn-default" id="btn-spindle-off">■ Stop</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:var(--gap-sm); margin-top:var(--gap-sm)">
+          <span class="led" id="spindle-led"></span>
+          <span class="dim" style="font-size:0.7rem" id="spindle-speed-display">0 rpm</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Coolant</div>
+        <div class="btn-grid btn-grid-2">
+          <button class="btn btn-default" id="btn-flood">Flood</button>
+          <button class="btn btn-default" id="btn-mist">Mist</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Feed &amp; Rapid</div>
+        <div class="override-row">
+          <span class="override-label">Feed</span>
+          <input type="range" id="feed-override" min="0" max="2" step="0.01" value="1">
+          <span class="override-value" id="feed-override-val">100%</span>
+        </div>
+        <div class="override-row">
+          <span class="override-label">Rapid</span>
+          <input type="range" id="rapid-override" min="0" max="1" step="0.01" value="1">
+          <span class="override-value" id="rapid-override-val">100%</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ---- Main panel: shared viewer + per-tab control strips ---- -->
+    <main id="panel-main">
+
+      <!-- Tab bar -->
+      <div id="tab-bar">
+        <button class="tab-btn active" data-tab="manual">Manual</button>
+        <button class="tab-btn" data-tab="mdi">MDI</button>
+        <button class="tab-btn" data-tab="auto">Auto</button>
+        <button class="tab-btn" data-tab="offsets">Offsets</button>
+        <button class="tab-btn" data-tab="status">Status</button>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           Shared toolpath viewer
+           Always visible when tab = Manual | MDI | Auto.
+           Hidden for Offsets and Status.
+      ══════════════════════════════════════════════════════════ -->
+      <div id="shared-viewer">
+        <div class="viewer-toolbar">
+          <div class="btn-grid" style="grid-template-columns:repeat(4,auto); gap:2px">
+            <button class="btn btn-default viewer-plane-btn active" data-plane="XY">XY</button>
+            <button class="btn btn-default viewer-plane-btn" data-plane="XZ">XZ</button>
+            <button class="btn btn-default viewer-plane-btn" data-plane="YZ">YZ</button>
+            <button class="btn btn-default viewer-plane-btn" data-plane="3D" title="3D orbit view — drag to rotate, shift+drag to pan">3D</button>
+          </div>
+          <button class="btn btn-default" id="btn-viewer-fit" title="Fit to content">⊡ Fit</button>
+          <div class="viewer-sep"></div>
+          <span class="viewer-pos-display">
+            <span class="viewer-axis-label" style="color:var(--dro-x)">X</span>
+            <span id="vpos-x" class="viewer-axis-val">0.000</span>
+            <span class="viewer-axis-label" style="color:var(--dro-y)">Y</span>
+            <span id="vpos-y" class="viewer-axis-val">0.000</span>
+            <span class="viewer-axis-label" style="color:var(--dro-z)">Z</span>
+            <span id="vpos-z" class="viewer-axis-val">0.000</span>
+          </span>
+          <div class="viewer-sep"></div>
+          <span id="viewer-status" class="dim" style="font-size:0.65rem">No file loaded</span>
+          <span class="dim" id="viewer-hint" style="font-size:0.6rem; margin-left:auto">drag: pan · scroll: zoom</span>
+        </div>
+        <canvas id="viewer-canvas"></canvas>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           MDI control strip
+           Shown below the viewer when MDI tab is active.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-panel-mdi">
+        <div class="mdi-bar">
+          <input class="mdi-input" id="mdi-input" type="text"
+                 placeholder="Enter G-code (e.g. G0 X10 Y20)" autocomplete="off" spellcheck="false">
+          <button class="btn btn-primary" id="btn-mdi-send">Send</button>
+        </div>
+        <div style="flex:1; overflow-y:auto; padding:var(--gap-sm) var(--gap); border-top:1px solid var(--border)">
+          <div class="section-title">History</div>
+          <div id="mdi-history" style="font-family:var(--font-mono); font-size:0.75rem; line-height:1.6"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           Auto program controls
+           Shown below the viewer when Auto tab is active.
+           File is loaded in the Manual tab; this tab runs it.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel tab-panel-auto-controls" id="tab-panel-auto">
+        <div class="program-bar">
+          <span class="program-file" id="program-file">No file loaded</span>
+          <span class="dim" id="program-line">—</span>
+          <button class="btn btn-default" id="btn-prog-open" style="font-size:0.65rem; padding:0.15rem 0.5rem">Open…</button>
+        </div>
+        <div id="program-progress" class="prog-bar">
+          <div id="program-progress-fill" class="prog-bar-fill"></div>
+          <span id="program-progress-pct" class="prog-bar-pct">0%</span>
+        </div>
+        <div style="display:flex; gap:var(--gap-sm); padding:var(--gap-sm) var(--gap); flex-shrink:0; flex-wrap:wrap">
+          <button class="btn btn-success" id="btn-prog-run">▶ Run</button>
+          <button class="btn btn-warn" id="btn-prog-pause">⏸ Pause</button>
+          <button class="btn btn-danger" id="btn-prog-stop">■ Stop</button>
+          <button class="btn btn-default" id="btn-prog-step">Step</button>
+          <button class="btn btn-default" id="btn-prog-rewind" title="Rewind to start">⏮ Rewind</button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           G-code listing — shared between Manual and Auto tabs.
+           data-tabs tells the tab switcher to show this panel
+           whenever Manual OR Auto is active.
+           The same DOM element (same loaded file, same scroll
+           position) appears in both tabs — no duplication.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel" id="gcode-listing-panel" data-tabs="manual auto">
+        <div id="gcode-viewer" class="gcode-viewer">
+          <div id="gcode-dropzone" class="gcode-dropzone">
+            <div class="gcode-drop-hint">
+              <div class="gcode-drop-icon">⬇</div>
+              <div>Drop G-code file here</div>
+              <div class="dim" style="font-size:0.7rem; margin-top:0.25rem">.ngc · .nc · .gcode · .tap</div>
+              <button class="btn btn-default" id="btn-browse" style="margin-top:var(--gap)">Browse…</button>
+            </div>
+          </div>
+          <div id="gcode-lines"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           Offsets — full panel, replaces viewer when active.
+           WCS selection and touch-off live in the DRO panel
+           (right side) so they remain accessible during jogging.
+           This tab shows a reference view of all WCS registers.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel tab-panel-full" id="tab-panel-offsets">
+        <div class="panel-section">
+          <div class="section-title">Work Coordinate System</div>
+          <p class="dim" style="font-size:0.72rem; margin-bottom:var(--gap)">
+            Select the active WCS in the right panel. Jog to your reference point,
+            then use Touch Off to set each axis origin.
+          </p>
+          <div class="btn-grid" style="grid-template-columns: repeat(6,1fr); gap:var(--gap-sm)">
+            <button class="btn btn-default wcs-btn" data-wcs="G54">G54</button>
+            <button class="btn btn-default wcs-btn" data-wcs="G55">G55</button>
+            <button class="btn btn-default wcs-btn" data-wcs="G56">G56</button>
+            <button class="btn btn-default wcs-btn" data-wcs="G57">G57</button>
+            <button class="btn btn-default wcs-btn" data-wcs="G58">G58</button>
+            <button class="btn btn-default wcs-btn" data-wcs="G59">G59</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           Status — full panel, replaces viewer when active.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel tab-panel-full" id="tab-panel-status">
+        <div class="panel-section" style="flex:1; overflow-y:auto">
+          <div class="section-title">Machine Status</div>
+          <pre id="status-dump" style="font-size:0.7rem; line-height:1.5; color:var(--text-secondary)"></pre>
+        </div>
+        <div class="panel-section">
+          <div class="section-title">Error Log</div>
+          <div id="error-log" style="font-size:0.72rem; line-height:1.5; color:var(--red); max-height:8rem; overflow-y:auto"></div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ---- Right panel: DRO + WCS + Touch-off ---- -->
+    <aside id="panel-dro">
+
+      <!-- Position DRO -->
+      <div class="panel-section">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--gap-sm)">
+          <div class="section-title" style="margin-bottom:0">Position</div>
+          <!-- WCS = work coords in active G54/G55/…  ABS = machine (absolute) coords -->
+          <div class="coord-mode-btns">
+            <button class="btn btn-primary coord-mode-btn" id="coord-btn-wcs" data-mode="wcs"
+                    title="Work Coordinate System — position relative to active G54/G55/… origin">G54</button>
+            <button class="btn btn-default coord-mode-btn" id="coord-btn-abs" data-mode="abs"
+                    title="Absolute / machine coordinates — position from machine home">ABS</button>
+          </div>
+        </div>
+        <div class="dro-panel" id="dro-panel">
+          <!-- DRO axis rows injected by dro.js once config arrives.
+               Primary value = active mode (WCS or ABS).
+               Secondary dim value = the other mode. -->
+        </div>
+      </div>
+
+      <!-- Work Coordinate System selector + Touch-off
+           Workflow:
+             1. Select which WCS to use (G54 is the most common).
+             2. Jog to your reference point on the workpiece.
+             3. Press Set on each axis to zero it at the current position,
+                or type a known value first (e.g. half the stock width).
+             "Zero All" zeros every axis at once in the active WCS.
+           G10 L20 P{n} {Axis}0 means "at the current machine position,
+           {Axis} should read 0 in WCS {n}".  -->
+      <div class="panel-section">
+        <div class="section-title">Work Coords (WCS)</div>
+
+        <!-- WCS selector: which offset register to activate / set -->
+        <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:2px; margin-bottom:var(--gap)">
+          <button class="btn btn-primary wcs-btn" data-wcs="G54">G54</button>
+          <button class="btn btn-default wcs-btn" data-wcs="G55">G55</button>
+          <button class="btn btn-default wcs-btn" data-wcs="G56">G56</button>
+          <button class="btn btn-default wcs-btn" data-wcs="G57">G57</button>
+          <button class="btn btn-default wcs-btn" data-wcs="G58">G58</button>
+          <button class="btn btn-default wcs-btn" data-wcs="G59">G59</button>
+        </div>
+
+        <!-- Touch-off rows injected by dro.js (one Zero button per axis) -->
+        <div id="touch-off-panel">
+          <!-- rows injected by dro.js when axes are known -->
+        </div>
+        <!-- Zero All: sends G10 L20 P{n} X0 Y0 Z0 in one command -->
+        <button class="btn btn-warn" id="btn-zero-all" style="width:100%; margin-top:var(--gap-sm)"
+                title="Zero all axes at current position in the active WCS">Zero All Axes</button>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">Tool</div>
+        <div style="display:flex; gap:var(--gap); align-items:baseline">
+          <span class="dim" style="font-size:0.7rem">T</span>
+          <span class="mono" id="tool-number" style="font-size:1.1rem">0</span>
+          <span class="dim" style="font-size:0.7rem">offset Z</span>
+          <span class="mono" id="tool-offset-z" style="font-size:0.8rem">0.000</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ---- Bottom panel: status bar ---- -->
+    <div id="panel-bottom">
+      <div id="status-bar">Connecting…</div>
+    </div>
+
+  </div><!-- #body -->
+
+</div><!-- #app -->
+
+<!-- Disconnected overlay -->
+<div id="overlay-disconnected">
+  <div class="overlay-box">
+    <h2>Disconnected</h2>
+    <p>Lost connection to LinuxCNC server.<br>Reconnecting…</p>
+  </div>
+</div>
+
+<!-- Hidden file input for program open -->
+<input type="file" id="file-picker" accept=".ngc,.nc,.gcode,.tap,.cnc" style="display:none">
+
+<script type="module" src="/static/js/ws.js"></script>
+<script type="module" src="/static/js/state.js"></script>
+<script type="module" src="/static/js/tabs.js"></script>
+<script type="module" src="/static/js/dro.js"></script>
+<script type="module" src="/static/js/overrides.js"></script>
+<script type="module" src="/static/js/jog.js"></script>
+<script type="module" src="/static/js/main.js"></script>
+<script type="module" src="/static/js/gcode.js"></script>
+<script type="module" src="/static/js/viewer.js"></script>
+<script type="module" src="/static/js/guards.js"></script>
+</body>
+</html>

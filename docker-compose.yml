@@ -1,0 +1,18 @@
+services:
+  webui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8090:8090"
+    volumes:
+      # Mount a local nc_files folder so you can drop G-code files in from the host
+      - ./nc_files:/root/linuxcnc/nc_files
+    environment:
+      - WEBUI_PORT=8090
+    # LinuxCNC uspace needs /dev/shm for NML shared memory
+    shm_size: "256mb"
+    # uspace doesn't need --privileged but does need these for NML
+    security_opt:
+      - seccomp:unconfined
+    restart: unless-stopped

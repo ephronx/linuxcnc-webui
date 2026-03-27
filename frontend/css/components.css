@@ -1,0 +1,514 @@
+/* ============================================================
+   COMPONENTS — buttons, DRO, sliders, LEDs, status bar
+   All sizes relative — rem, %, fr only.
+   ============================================================ */
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, opacity 0.1s;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;    /* prevent scroll-on-hold for jog buttons */
+}
+
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-default {
+  background: var(--bg-3);
+  border-color: var(--border-hi);
+  color: var(--text-primary);
+}
+.btn-default:hover:not(:disabled) { background: var(--border-hi); }
+
+.btn-primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent); }
+
+.btn-danger {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) { background: var(--red); }
+
+.btn-success {
+  background: #14532d;
+  border-color: var(--green);
+  color: #fff;
+}
+.btn-success:hover:not(:disabled) { background: #16a34a; }
+
+.btn-warn {
+  background: #78350f;
+  border-color: var(--yellow);
+  color: #fff;
+}
+.btn-warn:hover:not(:disabled) { background: #d97706; }
+
+/* Full-width button */
+.btn-block { width: 100%; }
+
+/* Button grid — equal columns */
+.btn-grid {
+  display: grid;
+  gap: var(--gap-sm);
+}
+.btn-grid-2 { grid-template-columns: 1fr 1fr; }
+.btn-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ---- E-stop — always prominent ---- */
+#btn-estop {
+  background: var(--red);
+  border-color: #ff6666;
+  color: #fff;
+  font-size: 1rem;
+  padding: 0.6rem 1rem;
+  letter-spacing: 0.08em;
+}
+#btn-estop:hover { background: #ff2222; }
+
+/* ---- DRO ---- */
+.dro-panel {
+  padding: var(--gap);
+}
+
+.dro-axis {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr auto;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+.dro-axis:last-child { border-bottom: none; }
+
+.dro-label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.dro-value {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-align: right;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.dro-value-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.dro-mcs {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.dro-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dro-actions .btn {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.65rem;
+}
+
+/* Axis colours */
+.axis-x .dro-label, .axis-x .dro-value { color: var(--dro-x); }
+.axis-y .dro-label, .axis-y .dro-value { color: var(--dro-y); }
+.axis-z .dro-label, .axis-z .dro-value { color: var(--dro-z); }
+.axis-a .dro-label, .axis-a .dro-value { color: var(--dro-a); }
+.axis-b .dro-label, .axis-b .dro-value { color: var(--dro-b); }
+.axis-c .dro-label, .axis-c .dro-value { color: var(--dro-c); }
+
+/* WCS / ABS coordinate mode button group */
+.coord-mode-btns {
+  display: flex;
+  gap: 2px;
+}
+.coord-mode-btn {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+}
+
+/* ---- LED indicator ---- */
+.led {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.led.on-green  { background: var(--green);  box-shadow: 0 0 4px var(--green); }
+.led.on-red    { background: var(--red);    box-shadow: 0 0 4px var(--red); }
+.led.on-yellow { background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+.led.on-blue   { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+
+/* ---- Status indicator row ---- */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) var(--gap);
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.status-badge.estop   { background: var(--red-dim);  border-color: var(--red);    color: #fff; }
+.status-badge.on      { background: #14532d;          border-color: var(--green);  color: #fff; }
+.status-badge.homed   { background: #1e3a5f;          border-color: var(--accent); color: #fff; }
+.status-badge.mode    { background: var(--bg-3);      border-color: var(--border-hi); }
+
+/* ---- Override sliders ---- */
+.override-row {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) 0;
+}
+
+.override-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.override-value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 0.35rem;
+  background: var(--bg-3);
+  border-radius: 999px;
+  outline: none;
+  border: 1px solid var(--border);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-1);
+}
+
+/* ---- Jog controls ---- */
+.jog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: var(--gap-sm);
+  aspect-ratio: 1;
+  max-width: 12rem;
+  margin: 0 auto;
+}
+
+.jog-btn {
+  font-size: 1.1rem;
+  padding: 0;
+  aspect-ratio: 1;
+}
+
+/* ---- MDI input ---- */
+.mdi-bar {
+  display: flex;
+  gap: var(--gap-sm);
+  padding: var(--gap);
+  align-items: center;
+}
+
+.mdi-input {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.mdi-input:focus { border-color: var(--accent); }
+
+/* ---- Status bar (bottom of screen) ---- */
+#status-bar {
+  padding: 0.25rem var(--gap-lg);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#status-bar.warn     { color: var(--yellow); }
+#status-bar.critical { color: var(--red); background: var(--red-dim); }
+
+/* ---- Connection dot in header ---- */
+#conn-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+#conn-indicator.connected    { color: var(--green); }
+#conn-indicator.disconnected { color: var(--red); }
+
+/* ---- Program info ---- */
+.program-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--gap);
+  padding: var(--gap-sm) var(--gap);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.program-file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+/* ---- Program progress bar ---- */
+.prog-bar {
+  position: relative;
+  width: 100%;
+  height: 1.8rem;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.prog-bar-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: var(--accent-dim);
+  transition: width 0.3s ease;
+}
+
+.prog-bar-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+/* ---- G-code viewer ---- */
+.gcode-viewer {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--bg-0);
+}
+
+/* Drop zone — shown when no file is loaded */
+.gcode-dropzone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  background: var(--bg-0);
+  border: 2px dashed var(--border-hi);
+  margin: var(--gap);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.gcode-dropzone.hidden {
+  display: none;
+}
+
+.gcode-dropzone.drag-over {
+  border-color: var(--accent);
+  background: rgba(0, 170, 255, 0.06);
+}
+
+.gcode-drop-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  pointer-events: none; /* let drag events fall through to the zone */
+}
+.gcode-drop-hint > button { pointer-events: auto; }
+
+.gcode-drop-icon {
+  font-size: 2.5rem;
+  color: var(--border-hi);
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+/* Scrollable line list */
+#gcode-lines {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  padding: var(--gap-sm) 0;
+}
+
+.gc-line {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--gap-sm);
+  white-space: pre;
+}
+
+.gc-line:hover {
+  background: var(--bg-2);
+}
+
+.gc-line.active {
+  background: var(--accent-dim);
+  color: #fff;
+}
+
+.gc-line.active .gc-num {
+  color: rgba(255,255,255,0.6);
+}
+
+.gc-num {
+  width: 3.5rem;
+  text-align: right;
+  padding-right: var(--gap-sm);
+  color: var(--text-dim);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.gc-text {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+/* Syntax colouring — basic */
+.gc-line .gc-motion   { color: var(--dro-z); }
+.gc-line .gc-comment  { color: var(--text-dim); font-style: italic; }
+.gc-line .gc-toolcall { color: var(--dro-a); }
+
+/* ---- Toolpath viewer ---- */
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: var(--gap-sm) var(--gap);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.viewer-plane-btn         { padding: 0.2rem 0.55rem; font-size: 0.7rem; }
+.viewer-plane-btn.active  { background: var(--accent-dim); border-color: var(--accent); color:#fff; }
+
+.viewer-sep {
+  width: 1px;
+  height: 1.2rem;
+  background: var(--border-hi);
+  margin: 0 var(--gap-sm);
+  flex-shrink: 0;
+}
+
+.viewer-pos-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.viewer-axis-label { font-weight: 700; font-size: 0.65rem; }
+.viewer-axis-val   { color: var(--text-primary); min-width: 3.5rem; }
+
+#viewer-canvas {
+  flex: 1 1 0;      /* flex-basis:0 + min-height:0 lets canvas shrink freely */
+  min-height: 0;    /* prevent intrinsic canvas size from blocking flex shrink */
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}

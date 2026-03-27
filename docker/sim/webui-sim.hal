@@ -1,0 +1,33 @@
+# ============================================================
+# HAL file for WebUI simulator — position feedback = commanded
+# No real hardware, no step generators.
+# ============================================================
+
+loadrt [KINS]KINEMATICS
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=3
+
+addf motion-command-handler servo-thread
+addf motion-controller servo-thread
+
+# ---- Simulated axes: feed commanded pos back as feedback ----
+# Joint 0 — X
+net x-pos-cmd joint.0.motor-pos-cmd => joint.0.motor-pos-fb
+
+# Joint 1 — Y
+net y-pos-cmd joint.1.motor-pos-cmd => joint.1.motor-pos-fb
+
+# Joint 2 — Z
+net z-pos-cmd joint.2.motor-pos-cmd => joint.2.motor-pos-fb
+
+# ---- Home switches — always active so homing completes instantly ----
+net x-home joint.0.home-sw-active
+net y-home joint.1.home-sw-active
+net z-home joint.2.home-sw-active
+
+setp joint.0.home-sw-active 1
+setp joint.1.home-sw-active 1
+setp joint.2.home-sw-active 1
+
+# ---- Spindle (simulated) ----
+net spindle-speed-cmd spindle.0.speed-out => spindle.0.speed-in
+setp spindle.0.at-speed 1
