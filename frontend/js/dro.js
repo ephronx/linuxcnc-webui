@@ -34,6 +34,7 @@ const badgeEstop       = document.getElementById("badge-estop");
 const badgeState       = document.getElementById("badge-state");
 const badgeMode        = document.getElementById("badge-mode");
 const badgeHomed       = document.getElementById("badge-homed");
+const badgeMock        = document.getElementById("badge-mock");
 const machineName      = document.getElementById("machine-name");
 const toolNumber       = document.getElementById("tool-number");
 const toolOffsetZ      = document.getElementById("tool-offset-z");
@@ -247,6 +248,9 @@ function _updateBadges(s) {
   // Homed badge
   const allHomed = Array.isArray(m.homed) && m.homed.slice(0, _axes.length).every(v => v);
   badgeHomed.style.display = allHomed ? "" : "none";
+
+  // Mock mode badge — visible whenever the server is not connected to a real LinuxCNC
+  if (badgeMock) badgeMock.style.display = state.mock ? "" : "none";
 
   // Keep WCS button label in sync with active WCS (G54, G55, …)
   const wcsIdx = state.pos?.g5x_index || 1;

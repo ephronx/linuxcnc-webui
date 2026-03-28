@@ -112,30 +112,49 @@ class MachineBridge:
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def connect(self):
-        """Open connections to the running LinuxCNC instance."""
+    def connect(self) -> bool:
+        """
+        Open connections to the running LinuxCNC instance.
+        Returns True if connection succeeded, False otherwise.
+        Safe to call repeatedly — retries after a failed or dropped connection.
+        """
         if not HAS_LINUXCNC:
             log.warning("linuxcnc module not available — running in mock mode")
-            return
+            return False
         try:
             self._stat = linuxcnc.stat()
             self._cmd = linuxcnc.command()
             self._err = linuxcnc.error_channel()
+            self._stat.poll()   # verify the connection is live
             log.info("Connected to LinuxCNC")
+            return True
         except Exception as e:
-            log.error(f"Could not connect to LinuxCNC: {e}")
+            self._stat = None
+            self._cmd = None
+            self._err = None
+            log.warning(f"Could not connect to LinuxCNC: {e} — running in mock mode")
 
     # ------------------------------------------------------------------
     # State polling
     # ------------------------------------------------------------------
 
+    @property
+    def is_mock(self) -> bool:
+        return not HAS_LINUXCNC or self._stat is None
+
     def build_state(self) -> dict:
-        if not HAS_LINUXCNC or self._stat is None:
-            return self._mock_state()
+        if self.is_mock:
+            state = self._mock_state()
+            state["mock"] = True
+            return state
         try:
-            return self._real_state()
-        except linuxcnc.error as e:
-            log.warning(f"stat poll error: {e}")
+            state = self._real_state()
+            state["mock"] = False
+            return state
+        except Exception as e:
+            log.warning(f"stat poll error: {e} — dropping frame")
+            # Mark stat as None so retry logic kicks in next cycle
+            self._stat = None
             return {}
 
     def _real_state(self) -> dict:
@@ -617,8 +636,20 @@ class MachineBridge:
                 pass
 
     async def poll_loop(self):
-        """Push state to all connected clients at 20Hz."""
+        """Push state to all connected clients at 20Hz.
+        Automatically retries LinuxCNC connection every 5 seconds if lost."""
+        _retry_ticks = 0
+        _RETRY_INTERVAL = 100  # ticks at 20Hz = 5 seconds
+
         while True:
+            # Retry connecting to LinuxCNC if we lost (or never had) the connection
+            if HAS_LINUXCNC and self._stat is None:
+                _retry_ticks += 1
+                if _retry_ticks >= _RETRY_INTERVAL:
+                    _retry_ticks = 0
+                    log.info("Attempting to reconnect to LinuxCNC...")
+                    self.connect()
+
             if self.clients:
                 state = self.build_state()
                 if state:

@@ -198,10 +198,13 @@
   color: var(--text-secondary);
 }
 
-.status-badge.estop   { background: var(--red-dim);  border-color: var(--red);    color: #fff; }
-.status-badge.on      { background: #14532d;          border-color: var(--green);  color: #fff; }
-.status-badge.homed   { background: #1e3a5f;          border-color: var(--accent); color: #fff; }
-.status-badge.mode    { background: var(--bg-3);      border-color: var(--border-hi); }
+.status-badge.estop      { background: var(--red-dim);  border-color: var(--red);    color: #fff; }
+.status-badge.on         { background: #14532d;          border-color: var(--green);  color: #fff; }
+.status-badge.homed      { background: #1e3a5f;          border-color: var(--accent); color: #fff; }
+.status-badge.mode       { background: var(--bg-3);      border-color: var(--border-hi); }
+.status-badge.mock-badge { background: #3d2000; border-color: var(--yellow); color: var(--yellow);
+                           animation: mock-pulse 2s ease-in-out infinite; }
+@keyframes mock-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* ---- Override sliders ---- */
 .override-row {
