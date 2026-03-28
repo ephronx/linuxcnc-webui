@@ -176,21 +176,39 @@ Get the data flowing and commands working. UI can be ugly.
   - [x] Cycle Start / Pause / Stop / Step / Rewind
   - [x] Progress bar with % complete centered (1.8rem tall, fills with accent colour)
   - [x] Status message bar (colour-coded: default / warn / critical)
-  - [ ] Run time display
+  - [ ] Run time display + wall clock (QtDragon shows both)
+  - [ ] OPT BLOCK toggle (optional block skip — M1 blocks)
+  - [ ] OFF STOP toggle (feed hold on program stop)
+  - [ ] PAUSE SPINDLE button
+  - [ ] RELOAD button (reloads current G-code file from disk)
 - [x] **Jog controls**
   - [x] XY grid + Z+/Z- buttons (hold to jog continuous, release to stop)
   - [x] Jog increment selector (0.001 → 10mm)
   - [x] Jog velocity slider
   - [x] Jog panel hidden in AUTO mode (matches QtDragon behaviour)
   - [ ] A axis controls (conditional on config)
+  - [ ] User View button (save/restore custom 3D camera angle)
 - [x] **Override sliders** — feed / rapid / spindle (0–200%)
+  - [ ] Max velocity override slider (QtDragon has this as a 4th slider, separate from feed)
 - [x] **Spindle** — on/off buttons, RPM display, LED indicator
+  - [ ] AT SPEED indicator — confirms spindle has reached commanded RPM (safety-critical)
+  - [ ] Actual vs commanded RPM both displayed
+  - [ ] SCS (spindle speed) field in tool info strip
 - [x] **Coolant controls** — flood / mist toggle buttons
 - [x] **Machine state indicators** — E-Stop, Power, Mode, Homed badges
+  - [ ] AMPS / MB ERRORS / POWER / FAULT CODE readout strip (QtDragon bottom-right)
 - [x] **Guards** — all buttons gated by machine state (estop/reset/powered/homed)
   - [x] Jog + MDI disabled/hidden when program active, with tooltip explanation
   - [x] Status bar hint messages at each permission level
-- [ ] **Keyboard shortcuts** — match QtDragon bindings
+- [ ] **DRO strip enhancements** (seen in QtDragon persistent strip)
+  - [ ] REF X/Y/Z buttons alongside ZERO buttons (sets relative reference, distinct from WCS zero)
+  - [ ] DTG (distance to go) toggle in WCS selector row
+  - [ ] Per-axis HOME button in DRO strip
+  - [ ] HOME ALL button prominent in DRO strip
+  - [ ] Active modal G-codes strip (G8 G17 G21 G40 G54 G64 G80 G90 G91.1 G94 G97 G99)
+- [ ] **Macro buttons** — Macro0/Macro1 on main screen (read from INI MDI_COMMAND_LIST)
+- [ ] **Tool info strip** — TOOL number, DIA, SCS always visible in persistent area
+- [ ] **Keyboard shortcuts** — match QtDragon bindings (ESC=abort, F1=estop, F2=machine on, F11=fullscreen, Home=home AI, Pause=pause)
 
 ---
 
@@ -221,12 +239,15 @@ Get the data flowing and commands working. UI can be ugly.
 
 ### Phase 4 — Tool management tab
 
-- [ ] Tool table display (number, diameter, length offset, comment)
+- [ ] Tool table display — columns: tool, pocket, X, Y, Z, Diameter, Comment (matches QtDragon)
 - [ ] Edit tool entry inline
 - [ ] Add / delete tool
-- [ ] Load tool (M61)
+- [ ] Load tool (M61 Qn)
 - [ ] Touch off — tool length via touchplate or sensor
-- [ ] Sensor height configuration
+- [ ] Touch plate height configuration field
+- [ ] Tool diameter field (for cutter comp)
+- [ ] PROBE toggle (enable/disable touch plate probe)
+- [ ] Tool graphic (render current tool based on type/diameter)
 
 ---
 
@@ -237,32 +258,49 @@ Get the data flowing and commands working. UI can be ugly.
 - [x] "Zero All Axes" button (zeroes all axes in one G10 L20 command) — properly gated on homed
 - [x] Mock bridge handles G10 L20 and set_work_coord correctly
 - [x] Toolpath shifts in viewer when WCS origin changes
-- [ ] G54–G59.3 offset table display (show all stored offsets)
-- [ ] G92 offset display and clear button
-- [ ] Rotation offset
-- [ ] Sensor / laser / camera offset fields
-- [ ] Go-to-sensor button
+- [ ] G54–G59.3 offset table display with X/Y/Z columns (show all stored offsets, active row highlighted)
+- [ ] ABS / Rot / G92 / Tool offset rows above WCS table (matches QtDragon layout)
+- [ ] ZERO ROTATION button (clears rotation offset)
+- [ ] ZERO G92 button (clears G92 offset)
+- [ ] ZERO G5X button (zeros active WCS)
+- [ ] Workpiece height field (Z height of workpiece surface)
+- [ ] Tool sensor height field (height of touch plate / tool sensor)
+- [ ] Tool sensor location X/Y fields
+- [ ] Laser offset X/Y fields (if laser pointer configured)
+- [ ] Camera offset X/Y fields (if camera configured)
+- [ ] GO TO SENSOR button
+- [ ] LASER OFF / REF LASER buttons (conditional on config)
+- [ ] REF CAMERA / TOOL SENSOR buttons (conditional on config)
 
 ---
 
 ### Phase 6 — Status / log tab
 
-- [ ] Machine log display (scrolling, auto-scroll)
+- [ ] Machine log display (scrolling, auto-scroll) — matches QtDragon MACHINE LOG area
 - [ ] System/integrator log
 - [ ] Toggle between log sources
-- [ ] Clear log
-- [ ] Save log to file
+- [ ] Clear log (CLEAR STATUS button)
+- [ ] Save log to file (SAVE TO FILE button)
+- [ ] Recall last error button
 
 ---
 
 ### Phase 7 — Settings tab
 
-- [ ] Display preferences (alpha mode, mouse inhibit)
-- [ ] Feature toggles (virtual keyboard, tool sensor, camera, eoffsets)
-- [ ] Probe parameters (search vel, probe vel, max distance, retract, Z safe)
+- [ ] Keyboard mapping reference display (QtDragon shows ESC/F1/F2/F11/F12/Home/Pause)
+- [ ] Display preferences (alpha mode, inhibit mouse selection)
+- [ ] Feature toggles: virtual keyboard, tool sensor, camera, external offsets, override limits
+- [ ] Reload last tool on startup toggle
+- [ ] Reload last program on startup toggle
+- [ ] Use keyboard shortcuts toggle
 - [ ] Run-from-line toggle
-- [ ] Reload program on startup toggle
-- [ ] Theme selector (dark industrial / light / high contrast)
+- [ ] Probe parameters: search velocity, probe velocity, max probe distance, retract distance, Z safe travel
+- [ ] Home location X/Y fields (where to send machine for tool changes etc.)
+- [ ] Spindle base RPM field
+- [ ] G-code zoom level
+- [ ] Theme selector (dark industrial / grey industrial / high contrast)
+- [ ] TEST BUTTON / TEST LED / CALIBRATION diagnostic buttons (conditional on HAL)
+- [ ] HAL SCOPE / HAL METER / HAL SHOW launch buttons (power-user diagnostics)
 
 ---
 
@@ -278,8 +316,9 @@ Get the data flowing and commands working. UI can be ugly.
 
 ### Phase 9 — Macro buttons
 
-- [ ] 10 configurable macro buttons
+- [ ] Configurable macro buttons on main screen (QtDragon shows Macro0/Macro1 on right side)
 - [ ] Read MDI commands from INI `[MDI_COMMAND_LIST]`
+- [ ] Button labels from INI
 - [ ] Enable only in manual/MDI mode
 
 ---
@@ -289,8 +328,9 @@ Get the data flowing and commands working. UI can be ugly.
 - [ ] **Touch support** — all jog buttons work on touchscreen (touch events, no hover dependency)
 - [ ] **Virtual keyboard** — on-screen number/text input for touch operation
 - [ ] **Camera tab** — if webcam HAL component present
-- [ ] **GCode reference tab** — searchable G/M code list
-- [ ] **Setup/docs tab** — load HTML or PDF from config directory
+- [ ] **GCode reference tab** — scrollable G/M code list with descriptions + parameters panel (matches QtDragon GCODES tab)
+- [ ] **Setup/docs tab** — load HTML or PDF from config directory (QtDragon SETUP tab: HTML/PDF/PROPERTIES sub-tabs)
+- [ ] **Utils / Conversational CAM tab** — QtDragon UTILS tab: Facing, Bolt Hole Circle, NgcGui, Hole Enlarge; validate inputs, create program, send as macro
 - [ ] **Responsive breakpoints** — 800px panel / 1280px desktop / 1920px+ workstation
 - [ ] **Reconnect UX** — clear "disconnected" overlay when server drops
 - [ ] **Multi-screen** — same server, multiple browser clients (pendant + monitor)
