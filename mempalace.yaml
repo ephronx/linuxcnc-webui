@@ -1,0 +1,16 @@
+wing: linuxcnc_webui
+rooms:
+- name: docker
+  description: Files from docker/
+- name: frontend
+  description: Files from frontend/
+- name: nc_files
+  description: Files from nc_files/
+- name: screenshots
+  description: Files from screenshots/
+- name: backend
+  description: Files from server/
+- name: testing
+  description: Files from tests/
+- name: general
+  description: Files that don't fit other rooms
