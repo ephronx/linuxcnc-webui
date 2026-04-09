@@ -1,1 +1,1 @@
-You have MemPalace agents. Run mempalace_list_agents to see them.
+You have MemPalace specialist agents defined in ~/.mempalace/agents/. Read that directory to discover available roles (architect, reviewer, product_owner, ops). Use mempalace_diary_read and mempalace_diary_write with the agent name to access their diaries.
