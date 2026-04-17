@@ -449,7 +449,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: var(--gap-lg);
   padding: 0.4rem var(--gap-lg);
-  min-height: 4.5rem;
+  min-height: 5rem;
   flex-wrap: wrap;
   font-family: var(--font-mono);
 }
@@ -489,13 +489,14 @@ input[type="range"]::-moz-range-thumb {
 
 .strip-axis {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--gap-sm);
 }
 
 .strip-axis-label {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
 }
 
 .strip-axis-stack {
@@ -505,18 +506,36 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .strip-axis-val {
-  font-size: 1.6rem;
-  font-weight: 500;
+  font-size: 2.1rem;
+  font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
-.strip-axis-abs {
-  font-size: 0.62rem;
-  color: var(--text-dim);
-  margin-top: 0.15rem;
+.strip-axis-sec {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
   letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
+
+.strip-coord-toggle {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.65rem;
+  background: var(--bg-3);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-width: 3rem;
+}
+.strip-coord-toggle:hover { background: var(--bg-2); border-color: var(--accent); }
+.strip-coord-toggle.active-abs { background: var(--accent-dim); color: #fff; border-color: var(--accent); }
 
 .strip-label {
   font-family: var(--font-ui);
@@ -546,14 +565,16 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-primary);
 }
 
-/* On compact layouts, shrink further and hide the ABS secondary line. */
+/* On compact layouts, shrink further and hide the secondary coord line. */
 @media (max-width: 899px) {
   #persistent-strip {
     padding: 0.3rem var(--gap);
     gap: var(--gap);
-    min-height: 3.5rem;
+    min-height: 3.8rem;
   }
-  .strip-axis-val { font-size: 1.2rem; }
-  .strip-axis-abs { display: none; }
+  .strip-axis-label { font-size: 1.05rem; }
+  .strip-axis-val   { font-size: 1.5rem; }
+  .strip-axis-sec   { display: none; }
   .strip-state-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; min-width: 3.5rem; }
+  .strip-coord-toggle { padding: 0.25rem 0.5rem; min-width: 2.6rem; }
 }

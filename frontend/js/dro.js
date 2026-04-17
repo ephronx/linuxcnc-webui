@@ -41,22 +41,24 @@ const stripStateBadge  = document.getElementById("strip-state-badge");
 const stripWcs         = document.getElementById("strip-wcs");
 const stripTool        = document.getElementById("strip-tool");
 const stripRpm         = document.getElementById("strip-rpm");
+const stripCoordBtn    = document.getElementById("strip-coord-toggle");
 const stripDro = {
   X: document.getElementById("strip-dro-x"),
   Y: document.getElementById("strip-dro-y"),
   Z: document.getElementById("strip-dro-z"),
 };
-const stripAbs = {
-  X: document.getElementById("strip-abs-x"),
-  Y: document.getElementById("strip-abs-y"),
-  Z: document.getElementById("strip-abs-z"),
+const stripSec = {
+  X: document.getElementById("strip-sec-x"),
+  Y: document.getElementById("strip-sec-y"),
+  Z: document.getElementById("strip-sec-z"),
 };
 
 // ---- State ----
 
-let _axes = [];           // populated from config
-let _touchOffEls = [];    // per-axis touch-off <input> (kept for Zero All reset)
+let _axes = [];              // populated from config
+let _touchOffEls = [];       // per-axis touch-off <input> (kept for Zero All reset)
 let _decimalPlaces = 3;
+let _showWork = true;        // true = WCS primary (large), false = ABS primary
 
 // ---- Build DRO / touch-off from config ----
 
@@ -137,13 +139,32 @@ function _refreshDRO() {
   const mcs = pos.actual;
   const wcs = pos.actual.map((v, i) => v - (pos.g5x_offset[i] || 0) - (pos.g92_offset[i] || 0));
 
+  const primary   = _showWork ? wcs : mcs;
+  const secondary = _showWork ? mcs : wcs;
+  const wcsLabel  = WCS_LABEL[pos.g5x_index || 1] || "WCS";
+  const secLabel  = _showWork ? "ABS" : wcsLabel;
+
   _axes.forEach((axisName, i) => {
     const primaryEl = stripDro[axisName];
-    const absEl     = stripAbs[axisName];
-    if (primaryEl && wcs[i] !== undefined) primaryEl.textContent = wcs[i].toFixed(dp);
-    if (absEl     && mcs[i] !== undefined) absEl.textContent     = `ABS ${mcs[i].toFixed(dp)}`;
+    const secEl     = stripSec[axisName];
+    if (primaryEl && primary[i]   !== undefined) primaryEl.textContent = primary[i].toFixed(dp);
+    if (secEl     && secondary[i] !== undefined) secEl.textContent     = `${secLabel} ${secondary[i].toFixed(dp)}`;
   });
 }
+
+// ---- Coord mode toggle (strip WCS/ABS button) ----
+
+function _setCoordMode(showWork) {
+  _showWork = showWork;
+  if (stripCoordBtn) {
+    const wcsLabel = WCS_LABEL[state.pos?.g5x_index || 1] || "WCS";
+    stripCoordBtn.textContent = showWork ? wcsLabel : "ABS";
+    stripCoordBtn.classList.toggle("active-abs", !showWork);
+  }
+  _refreshDRO();
+}
+
+stripCoordBtn?.addEventListener("click", () => _setCoordMode(!_showWork));
 
 // ---- Connection indicator ----
 
@@ -191,9 +212,11 @@ function _updateBadges(s) {
   // Mock mode badge — visible whenever the server is not connected to a real LinuxCNC
   if (badgeMock) badgeMock.style.display = state.mock ? "" : "none";
 
-  // Persistent strip: active WCS badge
-  const wcsIdx = state.pos?.g5x_index || 1;
-  if (stripWcs) stripWcs.textContent = WCS_LABEL[wcsIdx] || "G54";
+  // Persistent strip: active WCS badge + coord-toggle label tracks active WCS
+  const wcsIdx   = state.pos?.g5x_index || 1;
+  const wcsLabel = WCS_LABEL[wcsIdx] || "G54";
+  if (stripWcs) stripWcs.textContent = wcsLabel;
+  if (stripCoordBtn && _showWork) stripCoordBtn.textContent = wcsLabel;
 
   // Persistent strip: consolidated state badge
   if (stripStateBadge) {
