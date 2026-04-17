@@ -2,7 +2,7 @@
 
 A modern browser-based front-end for [LinuxCNC](https://linuxcnc.org) — runs alongside the LinuxCNC process and exposes a full machine control interface over HTTP/WebSocket.
 
-![screenshot placeholder](docs/screenshot.png)
+![LinuxCNC Web UI — main view](docs/screenshot.png)
 
 ## Features
 
