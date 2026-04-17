@@ -233,7 +233,12 @@ onUpdate((s) => {
   _applyGates(s);
   _statusHint(s);
 
-  if (_justConnected && s.connected) {
+  // Wait for a real state frame (populated pos.actual) before deciding whether
+  // to auto-switch to Auto. state.js fires handlers on WS connect BEFORE the
+  // first frame arrives, at which point s.machine is still the default
+  // (mode=MANUAL, interp=IDLE) and the condition never matches.
+  const hasRealState = Array.isArray(s.pos?.actual) && s.pos.actual.length > 0;
+  if (_justConnected && s.connected && hasRealState) {
     _justConnected = false;
     const mode   = s.machine?.mode ?? MODE_MANUAL;
     const interp = s.machine?.interp_state ?? INTERP_IDLE;
