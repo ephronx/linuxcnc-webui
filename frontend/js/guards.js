@@ -35,7 +35,7 @@ const INTERP_PAUSED  = 3;
 const NEVER_GATE = [
   ".tab-btn",          // tab switching
   ".viewer-plane-btn", // XY / XZ / YZ view selector
-  ".coord-mode-btn",   // WCS / ABS display mode — read-only, never affects machine
+  ".strip-mode-btn",   // strip WCS / ABS display mode — read-only, never affects machine
   "#btn-estop",        // always reachable (safety)
   "#btn-prog-open",    // file selection is harmless
   "#btn-browse",       // file selection is harmless
@@ -82,7 +82,7 @@ function _updateEstopBtn(s) {
 
 function _reEnableNav() {
   // Split into individual selectors to avoid :not() list compatibility issues
-  [".tab-btn", ".viewer-plane-btn", ".coord-mode-btn",
+  [".tab-btn", ".viewer-plane-btn", ".strip-mode-btn",
    "#btn-estop", "#btn-prog-open", "#btn-browse", "#btn-viewer-fit"].forEach(sel => {
     document.querySelectorAll(sel).forEach(el => { el.disabled = false; el.title = ""; });
   });

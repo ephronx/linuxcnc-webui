@@ -83,82 +83,6 @@
 }
 #btn-estop:hover { background: #ff2222; }
 
-/* ---- DRO ---- */
-.dro-panel {
-  padding: var(--gap);
-}
-
-.dro-axis {
-  display: grid;
-  grid-template-columns: 1.2rem 1fr auto;
-  align-items: center;
-  gap: var(--gap-sm);
-  padding: var(--gap-sm) 0;
-  border-bottom: 1px solid var(--border);
-}
-.dro-axis:last-child { border-bottom: none; }
-
-.dro-label {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.dro-value {
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-  font-weight: 600;
-  text-align: right;
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
-
-.dro-value-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
-
-.dro-mcs {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-dim);
-  letter-spacing: 0.01em;
-  line-height: 1;
-}
-
-.dro-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dro-actions .btn {
-  padding: 0.15rem 0.4rem;
-  font-size: 0.65rem;
-}
-
-/* Axis colours */
-.axis-x .dro-label, .axis-x .dro-value { color: var(--dro-x); }
-.axis-y .dro-label, .axis-y .dro-value { color: var(--dro-y); }
-.axis-z .dro-label, .axis-z .dro-value { color: var(--dro-z); }
-.axis-a .dro-label, .axis-a .dro-value { color: var(--dro-a); }
-.axis-b .dro-label, .axis-b .dro-value { color: var(--dro-b); }
-.axis-c .dro-label, .axis-c .dro-value { color: var(--dro-c); }
-
-/* WCS / ABS coordinate mode button group */
-.coord-mode-btns {
-  display: flex;
-  gap: 2px;
-}
-.coord-mode-btn {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 0.1rem 0.45rem;
-}
-
 /* ---- LED indicator ---- */
 .led {
   display: inline-block;
@@ -514,4 +438,154 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
   cursor: crosshair;
   touch-action: none;
+}
+
+/* ============================================================
+   PERSISTENT STRIP — Tier 1 always-visible info bar
+   Height budget: ~5rem on desktop, wraps on compact.
+   ============================================================ */
+#persistent-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-lg);
+  padding: 0.4rem var(--gap-lg);
+  min-height: 5rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+}
+
+.strip-item {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  flex-shrink: 0;
+}
+
+.strip-state-badge {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius);
+  background: var(--bg-3);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-hi);
+  min-width: 4.5rem;
+  text-align: center;
+}
+.strip-state-badge.state-estop    { background: var(--red-dim);   color: #fff;              border-color: var(--red); }
+.strip-state-badge.state-running  { background: #065f46;          color: #d1fae5;           border-color: var(--green); }
+.strip-state-badge.state-pause    { background: #78350f;          color: #fef3c7;           border-color: var(--yellow); }
+.strip-state-badge.state-idle     { background: var(--bg-3);      color: var(--text-primary); border-color: var(--border-hi); }
+.strip-state-badge.state-off      { background: var(--bg-3);      color: var(--text-dim);   border-color: var(--border-hi); }
+
+.strip-dro {
+  display: flex;
+  gap: var(--gap-lg);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.strip-axis {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.strip-axis-label {
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: 0.02em;
+}
+
+.strip-axis-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.strip-axis-val {
+  font-size: 2.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip-axis-sec {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip-coord-mode {
+  display: inline-flex;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-3);
+}
+.strip-mode-btn {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0;
+  border-right: 1px solid var(--border-hi);
+  cursor: pointer;
+  min-width: 2.8rem;
+}
+.strip-mode-btn:last-child { border-right: 0; }
+.strip-mode-btn:hover      { color: var(--text-primary); background: var(--bg-2); }
+.strip-mode-btn.active     { background: var(--accent-dim); color: #fff; }
+
+/* Subtle tint shift when ABS is primary — helps at-a-glance mode read. */
+#persistent-strip.mode-abs .strip-axis-val { color: var(--accent); }
+
+.strip-label {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.strip-value {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  min-width: 2.2rem;
+}
+
+.strip-overrides {
+  gap: var(--gap);
+}
+
+.strip-override {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+/* On compact layouts, shrink further and hide the secondary coord line. */
+@media (max-width: 899px) {
+  #persistent-strip {
+    padding: 0.3rem var(--gap);
+    gap: var(--gap);
+    min-height: 3.8rem;
+  }
+  .strip-axis-label { font-size: 1.05rem; }
+  .strip-axis-val   { font-size: 1.5rem; }
+  .strip-axis-sec   { display: none; }
+  .strip-state-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; min-width: 3.5rem; }
+  .strip-mode-btn { padding: 0.25rem 0.5rem; min-width: 2.4rem; font-size: 0.65rem; }
 }
