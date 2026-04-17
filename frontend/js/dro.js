@@ -167,6 +167,11 @@ function _setCoordMode(showWork) {
 stripModeWcs?.addEventListener("click", () => _setCoordMode(true));
 stripModeAbs?.addEventListener("click", () => _setCoordMode(false));
 
+// Explicitly ensure these stay enabled — they are pure display-mode
+// toggles, never gated by machine state.
+if (stripModeWcs) stripModeWcs.disabled = false;
+if (stripModeAbs) stripModeAbs.disabled = false;
+
 // ---- Connection indicator ----
 
 function _updateConnection(connected) {
