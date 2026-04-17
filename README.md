@@ -16,7 +16,7 @@ A modern browser-based front-end for [LinuxCNC](https://linuxcnc.org) — runs a
 
 ## Display Requirements
 
-**Minimum: 1080px wide.** Target hardware is a 1920×1080 CNC controller; modern laptops, tablets in landscape, and 1080p touch panels all work well. Sub-1080 widths stack the layout vertically and are not supported for operator use — if you have an 800×600 panel, stick with LinuxCNC's built-in QtDragon HMI for now.
+**Minimum: 1024×768.** Target hardware is a 1920×1080 CNC controller; XGA panels (1024×768), modern laptops, tablets in landscape, and 1080p touch panels all work well. Below ~900px wide the layout stacks vertically and is not supported for operator use — if you have an 800×600 panel, stick with LinuxCNC's built-in QtDragon HMI for now.
 
 ## Architecture
 
