@@ -7,12 +7,19 @@ import { state, onUpdate } from "./state.js";
 
 // ---- Override sliders ----
 
-function _sliderSetup(sliderId, displayId, cmdName, toDisplay = v => `${Math.round(v * 100)}%`) {
-  const slider  = document.getElementById(sliderId);
-  const display = document.getElementById(displayId);
+function _sliderSetup(sliderId, displayId, cmdName, stripId, toDisplay = v => `${Math.round(v * 100)}%`) {
+  const slider   = document.getElementById(sliderId);
+  const display  = document.getElementById(displayId);
+  const stripEl  = stripId ? document.getElementById(stripId) : null;
   if (!slider) return;
 
   let _dragging = false;
+
+  const _render = (v) => {
+    const text = toDisplay(v);
+    if (display)  display.textContent  = text;
+    if (stripEl)  stripEl.textContent  = text;
+  };
 
   slider.addEventListener("pointerdown", () => { _dragging = true; });
   slider.addEventListener("pointerup",   () => { _dragging = false; });
@@ -20,7 +27,7 @@ function _sliderSetup(sliderId, displayId, cmdName, toDisplay = v => `${Math.rou
 
   slider.addEventListener("input", () => {
     const v = parseFloat(slider.value);
-    if (display) display.textContent = toDisplay(v);
+    _render(v);
     send({ cmd: cmdName, value: v });
   });
 
@@ -28,14 +35,14 @@ function _sliderSetup(sliderId, displayId, cmdName, toDisplay = v => `${Math.rou
     update(v) {
       if (_dragging) return;  // don't jump while user is dragging
       slider.value = v;
-      if (display) display.textContent = toDisplay(v);
+      _render(v);
     }
   };
 }
 
-const feedSlider    = _sliderSetup("feed-override",    "feed-override-val",    "feed_override");
-const rapidSlider   = _sliderSetup("rapid-override",   "rapid-override-val",   "rapid_override");
-const spindleSlider = _sliderSetup("spindle-override", "spindle-override-val", "spindle_override");
+const feedSlider    = _sliderSetup("feed-override",    "feed-override-val",    "feed_override",    "strip-feed-pct");
+const rapidSlider   = _sliderSetup("rapid-override",   "rapid-override-val",   "rapid_override",   "strip-rapid-pct");
+const spindleSlider = _sliderSetup("spindle-override", "spindle-override-val", "spindle_override", "strip-spindle-pct");
 
 onUpdate((s) => {
   if (!s.connected) return;

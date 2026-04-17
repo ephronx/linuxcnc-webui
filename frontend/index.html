@@ -291,24 +291,10 @@
         <div id="modal-codes" class="mono dim" style="font-size:0.75rem; line-height:1.6; letter-spacing:0.02em">—</div>
       </div>
 
-      <!-- Position DRO -->
-      <div class="panel-section">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--gap-sm)">
-          <div class="section-title" style="margin-bottom:0">Position</div>
-          <!-- WCS = work coords in active G54/G55/…  ABS = machine (absolute) coords -->
-          <div class="coord-mode-btns">
-            <button class="btn btn-primary coord-mode-btn" id="coord-btn-wcs" data-mode="wcs"
-                    title="Work Coordinate System — position relative to active G54/G55/… origin">G54</button>
-            <button class="btn btn-default coord-mode-btn" id="coord-btn-abs" data-mode="abs"
-                    title="Absolute / machine coordinates — position from machine home">ABS</button>
-          </div>
-        </div>
-        <div class="dro-panel" id="dro-panel">
-          <!-- DRO axis rows injected by dro.js once config arrives.
-               Primary value = active mode (WCS or ABS).
-               Secondary dim value = the other mode. -->
-        </div>
-      </div>
+      <!-- Primary DRO (X/Y/Z + state + tool + spindle + overrides) lives in
+           #persistent-strip at the bottom of the viewport. This aside keeps
+           only the task-context controls: active codes, WCS selector,
+           touch-off inputs, tool details. -->
 
       <!-- Work Coordinate System selector + Touch-off
            Workflow:
@@ -353,12 +339,71 @@
 
     </aside>
 
-    <!-- ---- Bottom panel: status bar ---- -->
-    <div id="panel-bottom">
-      <div id="status-bar">Connecting…</div>
+  </div><!-- #body -->
+
+  <!-- ============================================================
+       PERSISTENT STRIP — always visible, spans full width.
+       Tier 1 data: machine state · X/Y/Z DRO · active WCS ·
+       tool · spindle RPM · override %. Kept narrow vertically
+       so 1080p controllers keep plenty of viewer real estate.
+       ============================================================ -->
+  <div id="persistent-strip">
+
+    <div class="strip-item strip-state-item">
+      <span class="strip-state-badge" id="strip-state-badge">—</span>
     </div>
 
-  </div><!-- #body -->
+    <div class="strip-item strip-dro">
+      <div class="strip-axis" data-axis="X">
+        <span class="strip-axis-label" style="color:var(--dro-x)">X</span>
+        <div class="strip-axis-stack">
+          <span class="strip-axis-val" id="strip-dro-x">0.000</span>
+          <span class="strip-axis-abs" id="strip-abs-x">ABS 0.000</span>
+        </div>
+      </div>
+      <div class="strip-axis" data-axis="Y">
+        <span class="strip-axis-label" style="color:var(--dro-y)">Y</span>
+        <div class="strip-axis-stack">
+          <span class="strip-axis-val" id="strip-dro-y">0.000</span>
+          <span class="strip-axis-abs" id="strip-abs-y">ABS 0.000</span>
+        </div>
+      </div>
+      <div class="strip-axis" data-axis="Z">
+        <span class="strip-axis-label" style="color:var(--dro-z)">Z</span>
+        <div class="strip-axis-stack">
+          <span class="strip-axis-val" id="strip-dro-z">0.000</span>
+          <span class="strip-axis-abs" id="strip-abs-z">ABS 0.000</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip-item">
+      <span class="strip-label">WCS</span>
+      <span class="strip-value" id="strip-wcs">G54</span>
+    </div>
+
+    <div class="strip-item">
+      <span class="strip-label">T</span>
+      <span class="strip-value" id="strip-tool">0</span>
+    </div>
+
+    <div class="strip-item">
+      <span class="strip-label">RPM</span>
+      <span class="strip-value" id="strip-rpm">0</span>
+    </div>
+
+    <div class="strip-item strip-overrides">
+      <span class="strip-override"><span class="strip-label">F</span><span id="strip-feed-pct">100%</span></span>
+      <span class="strip-override"><span class="strip-label">R</span><span id="strip-rapid-pct">100%</span></span>
+      <span class="strip-override"><span class="strip-label">S</span><span id="strip-spindle-pct">100%</span></span>
+    </div>
+
+  </div>
+
+  <!-- ---- Bottom panel: status bar ---- -->
+  <div id="panel-bottom">
+    <div id="status-bar">Connecting…</div>
+  </div>
 
 </div><!-- #app -->
 

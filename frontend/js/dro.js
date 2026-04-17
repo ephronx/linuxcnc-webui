@@ -19,14 +19,8 @@ const STATE_ESTOP = 1, STATE_ESTOP_RESET = 2, STATE_OFF = 3, STATE_ON = 4;
 // g5x_index → G5x label (1=G54, 2=G55 … 9=G59.3)
 const WCS_LABEL = ["?", "G54", "G55", "G56", "G57", "G58", "G59", "G59.1", "G59.2", "G59.3"];
 
-// Axis index → CSS class suffix
-const AXIS_CLASS = ["axis-x", "axis-y", "axis-z", "axis-a", "axis-b", "axis-c"];
-
 // ---- DOM refs ----
 
-const droPanel         = document.getElementById("dro-panel");
-const coordBtnWcs      = document.getElementById("coord-btn-wcs");
-const coordBtnAbs      = document.getElementById("coord-btn-abs");
 const connLed          = document.getElementById("conn-led");
 const connText         = document.getElementById("conn-text");
 const connIndicator    = document.getElementById("conn-indicator");
@@ -42,67 +36,40 @@ const statusBar        = document.getElementById("status-bar");
 const statusDump       = document.getElementById("status-dump");
 const errorLog         = document.getElementById("error-log");
 
+// Persistent strip refs
+const stripStateBadge  = document.getElementById("strip-state-badge");
+const stripWcs         = document.getElementById("strip-wcs");
+const stripTool        = document.getElementById("strip-tool");
+const stripRpm         = document.getElementById("strip-rpm");
+const stripDro = {
+  X: document.getElementById("strip-dro-x"),
+  Y: document.getElementById("strip-dro-y"),
+  Z: document.getElementById("strip-dro-z"),
+};
+const stripAbs = {
+  X: document.getElementById("strip-abs-x"),
+  Y: document.getElementById("strip-abs-y"),
+  Z: document.getElementById("strip-abs-z"),
+};
+
 // ---- State ----
 
-let _showWork = true;     // true = WCS primary (G54/G55/…), false = ABS/machine primary
 let _axes = [];           // populated from config
-let _droValueEls = [];    // per-axis primary value <span>
-let _droSecEls   = [];    // per-axis secondary value <span> (always-visible secondary coord)
-let _droZeroEls  = [];    // per-axis zero button
 let _touchOffEls = [];    // per-axis touch-off <input> (kept for Zero All reset)
 let _decimalPlaces = 3;
 
-// ---- Build DRO rows from config ----
+// ---- Build DRO / touch-off from config ----
 
 function buildDRO(cfg) {
   _axes = cfg.axes || ["X", "Y", "Z"];
   _decimalPlaces = cfg.units === "imperial" ? 4 : 3;
-  droPanel.innerHTML = "";
-  _droValueEls = [];
-  _droSecEls   = [];
-  _droZeroEls  = [];
 
-  _axes.forEach((axisName, i) => {
-    const axClass = AXIS_CLASS[i] || `axis-${axisName.toLowerCase()}`;
-    const row = document.createElement("div");
-    row.className = `dro-axis ${axClass}`;
+  // Hide strip rows for axes the machine doesn't have (e.g. lathe without Y)
+  for (const axis of ["X", "Y", "Z"]) {
+    const row = document.querySelector(`.strip-axis[data-axis="${axis}"]`);
+    if (row) row.style.display = _axes.includes(axis) ? "" : "none";
+  }
 
-    const label = document.createElement("span");
-    label.className = "dro-label";
-    label.textContent = axisName;
-
-    // Value stack: primary (large) + secondary (small, dim)
-    const stack = document.createElement("div");
-    stack.className = "dro-value-stack";
-
-    const primary = document.createElement("span");
-    primary.className = "dro-value";
-    primary.textContent = "0.000";
-    _droValueEls.push(primary);
-
-    const secondary = document.createElement("span");
-    secondary.className = "dro-mcs";
-    secondary.textContent = "MCS 0.000";
-    _droSecEls.push(secondary);
-
-    stack.append(primary, secondary);
-
-    const actions = document.createElement("div");
-    actions.className = "dro-actions";
-
-    const zeroBtn = document.createElement("button");
-    zeroBtn.className = "btn btn-default";
-    zeroBtn.textContent = "Zero";
-    zeroBtn.dataset.axis = i;
-    zeroBtn.dataset.axisName = axisName;
-    _droZeroEls.push(zeroBtn);
-
-    actions.appendChild(zeroBtn);
-    row.append(label, stack, actions);
-    droPanel.appendChild(row);
-  });
-
-  // Build touch-off panel in the DRO panel
   _buildTouchOff(_axes);
 }
 
@@ -160,50 +127,22 @@ function _buildTouchOff(axes) {
   }
 }
 
-// ---- WCS / ABS mode buttons ----
-
-function _setCoordMode(wcs) {
-  _showWork = wcs;
-  coordBtnWcs?.classList.toggle("btn-primary", wcs);
-  coordBtnWcs?.classList.toggle("btn-default", !wcs);
-  coordBtnAbs?.classList.toggle("btn-primary", !wcs);
-  coordBtnAbs?.classList.toggle("btn-default", wcs);
-  _refreshDRO();
-}
-
-coordBtnWcs?.addEventListener("click", () => _setCoordMode(true));
-coordBtnAbs?.addEventListener("click", () => _setCoordMode(false));
-
-// ---- Zero buttons ----
-
-droPanel.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-axis-name]");
-  if (!btn || !btn.classList.contains("btn")) return;
-  const axisName = btn.dataset.axisName;
-  send({ cmd: "mdi", gcode: `G10 L20 P${state.pos.g5x_index || 1} ${axisName}0` });
-});
-
-// ---- Update DRO values ----
+// ---- Update DRO values (persistent strip) ----
 
 function _refreshDRO() {
   const pos = state.pos;
-  if (!pos) return;
+  if (!pos || !Array.isArray(pos.actual)) return;
 
-  const dp = _decimalPlaces;
+  const dp  = _decimalPlaces;
   const mcs = pos.actual;
   const wcs = pos.actual.map((v, i) => v - (pos.g5x_offset[i] || 0) - (pos.g92_offset[i] || 0));
 
-  const primary   = _showWork ? wcs : mcs;
-  const secondary = _showWork ? mcs : wcs;
-  const secLabel  = _showWork ? "ABS" : (WCS_LABEL[pos.g5x_index || 1] || "WCS");
-
-  _droValueEls.forEach((el, i) => {
-    if (primary[i] !== undefined) el.textContent = primary[i].toFixed(dp);
+  _axes.forEach((axisName, i) => {
+    const primaryEl = stripDro[axisName];
+    const absEl     = stripAbs[axisName];
+    if (primaryEl && wcs[i] !== undefined) primaryEl.textContent = wcs[i].toFixed(dp);
+    if (absEl     && mcs[i] !== undefined) absEl.textContent     = `ABS ${mcs[i].toFixed(dp)}`;
   });
-  _droSecEls.forEach((el, i) => {
-    if (secondary[i] !== undefined) el.textContent = `${secLabel} ${secondary[i].toFixed(dp)}`;
-  });
-
 }
 
 // ---- Connection indicator ----
@@ -252,9 +191,24 @@ function _updateBadges(s) {
   // Mock mode badge — visible whenever the server is not connected to a real LinuxCNC
   if (badgeMock) badgeMock.style.display = state.mock ? "" : "none";
 
-  // Keep WCS button label in sync with active WCS (G54, G55, …)
+  // Persistent strip: active WCS badge
   const wcsIdx = state.pos?.g5x_index || 1;
-  if (coordBtnWcs) coordBtnWcs.textContent = WCS_LABEL[wcsIdx] || "WCS";
+  if (stripWcs) stripWcs.textContent = WCS_LABEL[wcsIdx] || "G54";
+
+  // Persistent strip: consolidated state badge
+  if (stripStateBadge) {
+    const interp = m.interp_state;  // 1=IDLE 2=READING 3=PAUSED 4=WAITING
+    let label = "OFF", cls = "state-off";
+    if (m.estop) { label = "E-STOP"; cls = "state-estop"; }
+    else if (m.task_state === STATE_ESTOP_RESET) { label = "RESET"; cls = "state-off"; }
+    else if (m.task_state === STATE_ON) {
+      if      (interp === 2) { label = "RUNNING";   cls = "state-running"; }
+      else if (interp === 3) { label = "FEED HOLD"; cls = "state-pause"; }
+      else                   { label = "IDLE";      cls = "state-idle"; }
+    }
+    stripStateBadge.textContent = label;
+    stripStateBadge.className   = `strip-state-badge ${cls}`;
+  }
 }
 
 // ---- Spindle display ----
@@ -266,14 +220,17 @@ function _updateSpindle(s) {
   const disp = document.getElementById("spindle-speed-display");
   if (led) led.className = `led ${sp.enabled ? "on-green" : ""}`;
   if (disp) disp.textContent = `${Math.abs(sp.speed).toFixed(0)} rpm`;
+  if (stripRpm) stripRpm.textContent = `${Math.abs(sp.speed).toFixed(0)}`;
 }
 
 // ---- Tool display ----
 
 function _updateTool(s) {
   if (s.tool) {
-    toolNumber.textContent = s.tool.number ?? 0;
-    toolOffsetZ.textContent = (s.tool.offset?.[2] ?? 0).toFixed(_decimalPlaces);
+    const n = s.tool.number ?? 0;
+    if (toolNumber)  toolNumber.textContent  = n;
+    if (toolOffsetZ) toolOffsetZ.textContent = (s.tool.offset?.[2] ?? 0).toFixed(_decimalPlaces);
+    if (stripTool)   stripTool.textContent   = n;
   }
 }
 
