@@ -419,3 +419,61 @@ class TestJogWatchdog:
         assert 1 in b._mock["jogs"]
         assert 1 not in b._client_jogs
         assert 2 in b._client_jogs
+
+
+# ---- Modal G-codes ----
+
+class TestModalGcodes:
+    def test_state_bundle_includes_modal_block(self):
+        b = MachineBridge()
+        s = _build(b)
+        assert "modal" in s
+        assert "gcodes" in s["modal"]
+        assert "mcodes" in s["modal"]
+
+    def test_mock_gcodes_length_is_16(self):
+        """LinuxCNC's stat.gcodes is always a 16-slot array."""
+        b = MachineBridge()
+        s = _build(b)
+        assert len(s["modal"]["gcodes"]) == 16
+
+    def test_mock_gcodes_defaults(self):
+        """At boot: G17 plane, G90 absolute, G94 feed/min, G21 mm, G40 no comp."""
+        b = MachineBridge()
+        g = _build(b)["modal"]["gcodes"]
+        assert 170 in g   # G17
+        assert 900 in g   # G90
+        assert 940 in g   # G94
+        assert 210 in g   # G21
+        assert 400 in g   # G40
+        assert 490 in g   # G49
+
+    def test_mock_gcodes_default_wcs_is_g54(self):
+        b = MachineBridge()
+        g = _build(b)["modal"]["gcodes"]
+        assert 540 in g
+        assert 550 not in g
+
+    def test_mock_gcodes_wcs_follows_g5x_index(self):
+        """Switching WCS via set_work_coord updates the modal G-code slot."""
+        b = MachineBridge()
+        _cmd(b, "set_work_coord", code="G55")
+        g = _build(b)["modal"]["gcodes"]
+        assert 550 in g
+        assert 540 not in g
+
+    def test_mock_gcodes_wcs_extended_registers(self):
+        """G59.1/.2/.3 (g5x_index 7/8/9) map to 591/592/593."""
+        b = MachineBridge()
+        # The set_work_coord dispatch only maps G54-G59, so poke g5x_index directly
+        # to verify _mock_gcodes handles the extended range correctly.
+        b._mock["g5x_index"] = 7
+        assert 591 in _build(b)["modal"]["gcodes"]
+        b._mock["g5x_index"] = 9
+        assert 593 in _build(b)["modal"]["gcodes"]
+
+    def test_mock_gcodes_inactive_slots_are_negative(self):
+        """Trailing slots should be -1 (inactive) per LinuxCNC convention."""
+        b = MachineBridge()
+        g = _build(b)["modal"]["gcodes"]
+        assert g[-1] == -1

@@ -28,6 +28,7 @@ export const state = {
   coolant:   { flood: false, mist: false },
   tool:      { number: 0, offset: [] },
   limits:    { min_soft: [], max_soft: [] },
+  modal:     { gcodes: [], mcodes: [] },
   errors:    [],
   connected: false,
 };
