@@ -285,6 +285,12 @@
     <!-- ---- Right panel: DRO + WCS + Touch-off ---- -->
     <aside id="panel-dro">
 
+      <!-- Active modal G-codes -->
+      <div class="panel-section">
+        <div class="section-title">Active Codes</div>
+        <div id="modal-codes" class="mono dim" style="font-size:0.75rem; line-height:1.6; letter-spacing:0.02em">—</div>
+      </div>
+
       <!-- Position DRO -->
       <div class="panel-section">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--gap-sm)">
@@ -377,5 +383,6 @@
 <script type="module" src="/static/js/gcode.js"></script>
 <script type="module" src="/static/js/viewer.js"></script>
 <script type="module" src="/static/js/guards.js"></script>
+<script type="module" src="/static/js/modal.js"></script>
 </body>
 </html>

@@ -227,6 +227,13 @@ class MachineBridge:
                 "min_soft": list(s.min_position_limit),
                 "max_soft": list(s.max_position_limit),
             },
+            "modal": {
+                # Raw active modal codes from LinuxCNC — list of 16 ints.
+                # Values are G-code × 10 (e.g. 170 = G17, 911 = G91.1). -1 = inactive.
+                # Slot 0 is the current sequence number, not a G-code.
+                "gcodes": list(s.gcodes) if hasattr(s, "gcodes") else [],
+                "mcodes": list(s.mcodes) if hasattr(s, "mcodes") else [],
+            },
             "errors": errors,
         }
 
@@ -319,8 +326,37 @@ class MachineBridge:
                 "min_soft": [False] * 9,
                 "max_soft": [False] * 9,
             },
+            "modal": {
+                "gcodes": self._mock_gcodes(),
+                "mcodes": [],
+            },
             "errors": [],
         }
+
+    def _mock_gcodes(self) -> list:
+        """
+        Plausible power-on modal G-code set for mock mode.
+        Values are G-code × 10 to match LinuxCNC's stat.gcodes convention.
+        Slot 0 is the sequence number (0 here); -1 = inactive slot.
+        WCS slot reflects the live g5x_index so G54→G55 switches are visible.
+        """
+        idx = self._mock["g5x_index"]
+        wcs_code = 530 + idx * 10 if idx <= 6 else 590 + (idx - 6)
+        return [
+            0,         # slot 0: sequence number
+            0,         # slot 1: motion mode — G0
+            170,       # slot 2: plane — G17 (XY)
+            900,       # slot 3: distance mode — G90 (absolute)
+            940,       # slot 4: feed mode — G94 (units/min)
+            210,       # slot 5: units — G21 (mm)
+            400,       # slot 6: cutter comp — G40 (off)
+            490,       # slot 7: tool length offset — G49 (off)
+            980,       # slot 8: canned cycle return — G98
+            wcs_code,  # slot 9: WCS — G54..G59.3
+            640,       # slot 10: path control — G64
+            970,       # slot 11: spindle mode — G97 (RPM)
+            -1, -1, -1, -1,
+        ]
 
     # ------------------------------------------------------------------
     # Command dispatch
