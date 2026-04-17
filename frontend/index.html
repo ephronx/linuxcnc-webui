@@ -353,8 +353,12 @@
       <span class="strip-state-badge" id="strip-state-badge">—</span>
     </div>
 
-    <button class="strip-coord-toggle" id="strip-coord-toggle" type="button"
-            title="Toggle which coordinate is shown large: work (WCS) or machine (ABS)">WCS</button>
+    <div class="strip-coord-mode" role="group" aria-label="DRO coordinate mode">
+      <button class="strip-mode-btn active" id="strip-mode-wcs" data-mode="wcs" type="button"
+              title="Show work coordinates (active WCS) as the primary DRO">WCS</button>
+      <button class="strip-mode-btn" id="strip-mode-abs" data-mode="abs" type="button"
+              title="Show machine (absolute) coordinates as the primary DRO">ABS</button>
+    </div>
 
     <div class="strip-item strip-dro">
       <div class="strip-axis" data-axis="X">

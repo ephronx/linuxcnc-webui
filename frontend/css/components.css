@@ -521,21 +521,32 @@ input[type="range"]::-moz-range-thumb {
   font-variant-numeric: tabular-nums;
 }
 
-.strip-coord-toggle {
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.35rem 0.65rem;
-  background: var(--bg-3);
-  color: var(--text-primary);
+.strip-coord-mode {
+  display: inline-flex;
   border: 1px solid var(--border-hi);
   border-radius: var(--radius);
-  cursor: pointer;
-  min-width: 3rem;
+  overflow: hidden;
+  background: var(--bg-3);
 }
-.strip-coord-toggle:hover { background: var(--bg-2); border-color: var(--accent); }
-.strip-coord-toggle.active-abs { background: var(--accent-dim); color: #fff; border-color: var(--accent); }
+.strip-mode-btn {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0;
+  border-right: 1px solid var(--border-hi);
+  cursor: pointer;
+  min-width: 2.8rem;
+}
+.strip-mode-btn:last-child { border-right: 0; }
+.strip-mode-btn:hover      { color: var(--text-primary); background: var(--bg-2); }
+.strip-mode-btn.active     { background: var(--accent-dim); color: #fff; }
+
+/* Subtle tint shift when ABS is primary — helps at-a-glance mode read. */
+#persistent-strip.mode-abs .strip-axis-val { color: var(--accent); }
 
 .strip-label {
   font-family: var(--font-ui);
@@ -576,5 +587,5 @@ input[type="range"]::-moz-range-thumb {
   .strip-axis-val   { font-size: 1.5rem; }
   .strip-axis-sec   { display: none; }
   .strip-state-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; min-width: 3.5rem; }
-  .strip-coord-toggle { padding: 0.25rem 0.5rem; min-width: 2.6rem; }
+  .strip-mode-btn { padding: 0.25rem 0.5rem; min-width: 2.4rem; font-size: 0.65rem; }
 }

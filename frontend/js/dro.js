@@ -41,7 +41,9 @@ const stripStateBadge  = document.getElementById("strip-state-badge");
 const stripWcs         = document.getElementById("strip-wcs");
 const stripTool        = document.getElementById("strip-tool");
 const stripRpm         = document.getElementById("strip-rpm");
-const stripCoordBtn    = document.getElementById("strip-coord-toggle");
+const stripModeWcs     = document.getElementById("strip-mode-wcs");
+const stripModeAbs     = document.getElementById("strip-mode-abs");
+const stripRoot        = document.getElementById("persistent-strip");
 const stripDro = {
   X: document.getElementById("strip-dro-x"),
   Y: document.getElementById("strip-dro-y"),
@@ -152,19 +154,18 @@ function _refreshDRO() {
   });
 }
 
-// ---- Coord mode toggle (strip WCS/ABS button) ----
+// ---- Coord mode toggle (strip WCS/ABS buttons) ----
 
 function _setCoordMode(showWork) {
   _showWork = showWork;
-  if (stripCoordBtn) {
-    const wcsLabel = WCS_LABEL[state.pos?.g5x_index || 1] || "WCS";
-    stripCoordBtn.textContent = showWork ? wcsLabel : "ABS";
-    stripCoordBtn.classList.toggle("active-abs", !showWork);
-  }
+  stripModeWcs?.classList.toggle("active", showWork);
+  stripModeAbs?.classList.toggle("active", !showWork);
+  stripRoot?.classList.toggle("mode-abs", !showWork);
   _refreshDRO();
 }
 
-stripCoordBtn?.addEventListener("click", () => _setCoordMode(!_showWork));
+stripModeWcs?.addEventListener("click", () => _setCoordMode(true));
+stripModeAbs?.addEventListener("click", () => _setCoordMode(false));
 
 // ---- Connection indicator ----
 
@@ -212,11 +213,10 @@ function _updateBadges(s) {
   // Mock mode badge — visible whenever the server is not connected to a real LinuxCNC
   if (badgeMock) badgeMock.style.display = state.mock ? "" : "none";
 
-  // Persistent strip: active WCS badge + coord-toggle label tracks active WCS
+  // Persistent strip: active WCS badge
   const wcsIdx   = state.pos?.g5x_index || 1;
   const wcsLabel = WCS_LABEL[wcsIdx] || "G54";
   if (stripWcs) stripWcs.textContent = wcsLabel;
-  if (stripCoordBtn && _showWork) stripCoordBtn.textContent = wcsLabel;
 
   // Persistent strip: consolidated state badge
   if (stripStateBadge) {
@@ -317,8 +317,10 @@ onConfig((cfg) => {
 
 onUpdate((s) => {
   _updateConnection(s.connected);
-  if (!s.connected) return;
-
+  // Render whenever state changes — do NOT gate on s.connected. At startup
+  // state.connected flips true slightly before the first frame arrives, so
+  // a hard gate here could leave the DRO stuck at 0.000 in rare cases.
+  // Each update function guards its own inputs internally.
   _refreshDRO();
   _updateBadges(s);
   _updateSpindle(s);
