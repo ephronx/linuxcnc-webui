@@ -19,7 +19,7 @@ from pathlib import Path
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
@@ -53,6 +53,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="LinuxCNC Web UI", lifespan=lifespan)
 bridge = MachineBridge()
 machine_cfg: dict = {}
+
+
+# Frontend assets change constantly during development (bind-mounted in
+# Docker, edited on the LinuxCNC host). Disable browser caching on the
+# HTML shell and static assets so edits are visible on plain refresh —
+# otherwise stale CSS/JS against fresh HTML produces broken layouts.
+@app.middleware("http")
+async def _no_cache_frontend(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")

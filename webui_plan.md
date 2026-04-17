@@ -107,10 +107,10 @@ linuxcnc-webui/
 
 ### High priority
 
-- [ ] **Persistent DRO panel** — DRO + key status controls must remain visible on all tabs (PathPilot model). Structural layout change: split page into fixed bottom strip (Tier 1) + tabbed upper area (Tier 2/3). Biggest gap vs ISA-101 and operator expectations.
+- [x] **Persistent DRO panel** — DRO + key status controls must remain visible on all tabs (PathPilot model). Structural layout change: split page into fixed bottom strip (Tier 1) + tabbed upper area (Tier 2/3). Biggest gap vs ISA-101 and operator expectations. *Phase 1 delivered (#10): full-width strip with state badge, X/Y/Z DRO (WCS/ABS toggle), WCS/tool/RPM/override %. Phase 2 (REF/HOME/WCS selector + override sliders in-strip) is a future issue.*
 - [ ] **Actual vs commanded spindle RPM** — display both; commanded = what operator set, actual = confirms spindle is at speed
 - [ ] **Distance-to-go (DTG)** — third DRO row alongside Absolute and Machine positions
-- [ ] **Modal G-codes display** — show currently active G17/18/19, G90/91, G94/95, G40/41/42
+- [x] **Modal G-codes display** — show currently active G17/18/19, G90/91, G94/95, G40/41/42 *(shipped #7)*
 - [ ] **Offset change log** — record previous value + timestamp when tool or work offset is changed; confirm dialog for changes >5mm
 - [ ] **Alarm priority** — distinguish P1 (critical) from P4 (advisory); flash until acknowledged then go steady
 
@@ -205,7 +205,7 @@ Get the data flowing and commands working. UI can be ugly.
   - [ ] DTG (distance to go) toggle in WCS selector row
   - [ ] Per-axis HOME button in DRO strip
   - [ ] HOME ALL button prominent in DRO strip
-  - [ ] Active modal G-codes strip (G8 G17 G21 G40 G54 G64 G80 G90 G91.1 G94 G97 G99)
+  - [x] Active modal G-codes strip (G8 G17 G21 G40 G54 G64 G80 G90 G91.1 G94 G97 G99) *(shipped #7)*
 - [ ] **Macro buttons** — Macro0/Macro1 on main screen (read from INI MDI_COMMAND_LIST)
 - [ ] **Tool info strip** — TOOL number, DIA, SCS always visible in persistent area
 - [ ] **Keyboard shortcuts** — match QtDragon bindings (ESC=abort, F1=estop, F2=machine on, F11=fullscreen, Home=home AI, Pause=pause)

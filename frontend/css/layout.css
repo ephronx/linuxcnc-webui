@@ -9,11 +9,14 @@
 #app {
   display: grid;
   height: 100vh;
-  grid-template-rows: 2.5rem 1fr;
+  /* rows: header · body (fills) · persistent strip · status bar */
+  grid-template-rows: 2.5rem 1fr auto auto;
   grid-template-columns: 1fr;
   grid-template-areas:
     "header"
-    "body";
+    "body"
+    "strip"
+    "footer";
 }
 
 /* ---- Header bar ---- */
@@ -48,14 +51,13 @@
   background: var(--bg-0);  /* gap colour */
 }
 
-/* Standard layout: left panel | main | right DRO */
+/* Standard layout: left panel | main | right aux.
+   Right column narrower than before (DRO moved to persistent strip). */
 @media (min-width: 900px) {
   #body {
-    grid-template-columns: 14rem 1fr 16rem;
-    grid-template-rows: 1fr auto;
-    grid-template-areas:
-      "left  main  dro"
-      "left  bottom dro";
+    grid-template-columns: 14rem 1fr 12rem;
+    grid-template-rows: 1fr;
+    grid-template-areas: "left main dro";
   }
 }
 
@@ -63,28 +65,28 @@
 @media (max-width: 899px) {
   #body {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto auto;
+    grid-template-rows: auto 1fr auto;
     grid-template-areas:
       "dro"
       "main"
-      "left"
-      "bottom";
+      "left";
     overflow-y: auto;
   }
 }
 
-/* Wide layout: wider DRO, wider left panel */
+/* Wide layout: wider left, right stays modest */
 @media (min-width: 1400px) {
   #body {
-    grid-template-columns: 16rem 1fr 20rem;
+    grid-template-columns: 16rem 1fr 14rem;
   }
 }
 
 /* ---- Grid areas ---- */
-#panel-left   { grid-area: left;   overflow-y: auto; background: var(--bg-1); }
-#panel-main   { grid-area: main;   display: flex; flex-direction: column; background: var(--bg-1); overflow: hidden; }
-#panel-dro    { grid-area: dro;    overflow-y: auto; background: var(--bg-1); }
-#panel-bottom { grid-area: bottom; background: var(--bg-1); border-top: 1px solid var(--border); }
+#panel-left       { grid-area: left;   overflow-y: auto; background: var(--bg-1); }
+#panel-main       { grid-area: main;   display: flex; flex-direction: column; background: var(--bg-1); overflow: hidden; }
+#panel-dro        { grid-area: dro;    overflow-y: auto; background: var(--bg-1); }
+#persistent-strip { grid-area: strip;  background: var(--bg-2); border-top: 1px solid var(--border); }
+#panel-bottom     { grid-area: footer; background: var(--bg-1); border-top: 1px solid var(--border); }
 
 /* ---- Sections inside panels ---- */
 .panel-section {
