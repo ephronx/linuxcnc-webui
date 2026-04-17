@@ -14,6 +14,10 @@ A modern browser-based front-end for [LinuxCNC](https://linuxcnc.org) — runs a
 - **Auto / Manual / MDI tabs** — Context-aware UI that hides irrelevant controls (e.g. jog panel hidden during program execution)
 - **Mock mode** — Full machine simulation with G-code waypoint tracking; no LinuxCNC installation required for development
 
+## Display Requirements
+
+**Minimum: 1080px wide.** Target hardware is a 1920×1080 CNC controller; modern laptops, tablets in landscape, and 1080p touch panels all work well. Sub-1080 widths stack the layout vertically and are not supported for operator use — if you have an 800×600 panel, stick with LinuxCNC's built-in QtDragon HMI for now.
+
 ## Architecture
 
 ```
