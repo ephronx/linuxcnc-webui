@@ -40,7 +40,7 @@ pip install -r requirements.txt
 python linuxcnc_webui.py
 ```
 
-Open [http://localhost:8000](http://localhost:8000).
+Open [http://localhost:8090](http://localhost:8090).
 
 The server starts in **mock mode** automatically when the `linuxcnc` Python module is not installed. You can upload any `.ngc` / `.gcode` file and watch the simulated tool trace the toolpath.
 
@@ -53,15 +53,22 @@ pip install fastapi "uvicorn[standard]" python-multipart
 python linuxcnc_webui.py
 ```
 
-Connect from any device on the same network: `http://<machine-ip>:8000`
+Connect from any device on the same network: `http://<machine-ip>:8090`
 
-### Docker
+### Docker (mock-mode dev environment)
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
-Uses the included `docker/Dockerfile` with a LinuxCNC simulation config.
+Then open [http://localhost:8090](http://localhost:8090).
+
+The container runs the FastAPI server in **mock mode** (no LinuxCNC install). `server/`, `frontend/`, and `linuxcnc_webui.py` are bind-mounted from the host:
+
+- **Frontend edits** (HTML/CSS/JS): reflected on browser refresh — no restart needed
+- **Server edits** (Python): `docker compose restart webui`
+
+Real LinuxCNC cannot run in a container (needs the RT kernel + HAL + kernel modules). Validate against a real machine on the LinuxCNC host.
 
 ## Project Structure
 
@@ -111,8 +118,8 @@ Environment variables (or edit `server/config.py`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `WEBUI_PORT` | `8000` | HTTP/WS listen port |
-| `WEBUI_HOST` | `0.0.0.0` | Bind address |
+| `WEBUI_PORT` | `8090` | HTTP/WS listen port |
+| `WEBUI_HOST` | `127.0.0.1` | Bind address (use `0.0.0.0` for LAN access or Docker) |
 | `UPLOAD_DIR` | `nc_files/` | Directory for uploaded G-code files |
 
 ## Keyboard Shortcuts (jog panel)

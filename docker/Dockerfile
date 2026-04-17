@@ -1,65 +1,31 @@
 # ============================================================
-# LinuxCNC Web UI — Docker image
+# LinuxCNC Web UI — dev image (mock mode only)
 #
-# Runs LinuxCNC uspace simulator + the FastAPI web UI in one
-# container. No real hardware required.
+# Runs the FastAPI server in mock mode. No LinuxCNC install.
+# Real LinuxCNC needs an RT kernel + HAL + kernel modules, which
+# cannot run inside a container — validate against a real machine
+# on the LinuxCNC host.
 #
-# Build:
-#   docker compose build
-#
-# Run:
-#   docker compose up
+# Build + run via docker-compose.yml at the repo root:
+#   docker compose up --build
 # ============================================================
 
-FROM debian:bookworm-slim
+FROM python:3.12-slim
 
-# ---- Base system ----
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
-    xvfb \
-    x11-utils \
-    python3 \
-    python3-pip \
-    python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# ---- LinuxCNC APT repository ----
-RUN curl -fsSL https://deb.linuxcnc.org/linuxcnc-arch.gpg.key \
-    | gpg --dearmor -o /usr/share/keyrings/linuxcnc-archive-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/linuxcnc-archive-keyring.gpg] \
-    http://deb.linuxcnc.org/ bookworm base 2.9-uspace" \
-    > /etc/apt/sources.list.d/linuxcnc.list
+WORKDIR /app
 
-# ---- LinuxCNC uspace + axis GUI ----
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    linuxcnc-uspace \
-    linuxcnc-uspace-dev \
-    python3-linuxcnc \
-    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# ---- Python web UI dependencies ----
-COPY ../requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages \
-    -r /tmp/requirements.txt
+COPY linuxcnc_webui.py ./
+COPY server/ ./server/
+COPY frontend/ ./frontend/
 
-# ---- Copy web UI source ----
-COPY .. /opt/webui/
-RUN rm -rf /opt/webui/docker /opt/webui/tests /opt/webui/.pytest_cache
-
-# ---- Copy sim config ----
-COPY sim/ /opt/sim/
-
-# ---- Runtime directories ----
-RUN mkdir -p /root/linuxcnc/nc_files /root/linuxcnc/configs/webui-sim
-
-# ---- Entrypoint ----
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN mkdir -p /app/nc_files
 
 EXPOSE 8090
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "linuxcnc_webui.py", "--host", "0.0.0.0", "--port", "8090"]
