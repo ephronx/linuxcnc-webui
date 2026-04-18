@@ -123,6 +123,22 @@
   display: none;
 }
 
+/* Horizontal splitter between viewer and tab panels below. Thin strip with
+   a row-resize cursor; hides automatically when the viewer is hidden. */
+#viewer-splitter {
+  flex: 0 0 6px;
+  background: var(--bg-2);
+  border-top:    1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: row-resize;
+  user-select: none;
+  touch-action: none;
+  transition: background 120ms;
+}
+#viewer-splitter:hover,
+#viewer-splitter.dragging { background: var(--accent-dim); }
+#shared-viewer.hidden + #viewer-splitter { display: none; }
+
 /* ---- Per-tab control strips / full panels ---- */
 .tab-panel {
   display: none;                /* hidden by default */
