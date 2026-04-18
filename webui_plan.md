@@ -191,7 +191,7 @@ Get the data flowing and commands working. UI can be ugly.
 - [x] **Override sliders** — feed / rapid / spindle (0–200%)
   - [ ] Max velocity override slider (QtDragon has this as a 4th slider, separate from feed)
 - [x] **Spindle** — on/off buttons, RPM display, LED indicator
-  - [ ] AT SPEED indicator — confirms spindle has reached commanded RPM (safety-critical)
+  - [x] AT SPEED indicator — confirms spindle has reached commanded RPM (safety-critical) *(shipped in strip: direction arrow + at-speed dot)*
   - [ ] Actual vs commanded RPM both displayed
   - [ ] SCS (spindle speed) field in tool info strip
 - [x] **Coolant controls** — flood / mist toggle buttons
