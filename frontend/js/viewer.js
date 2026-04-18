@@ -60,6 +60,13 @@ let _bounds   = null;   // machine limits {X:[min,max], Y:[min,max], Z:[min,max]
 let _toolPos   = [0, 0, 0];  // machine coordinates (for viewer crosshair drawing)
 let _toolTrail = [];         // recent tool positions [[x,y,z], …] newest at end
 const TRAIL_MAX = 80;        // ~4 s of history at 20 Hz
+
+// Executed-segment fade: segments whose line is within this many lines
+// behind _execLine render at full opacity; older segments fade linearly
+// toward EXECUTED_FADE_FLOOR. Emphasises the current cut without hiding
+// the full-path context. Ref #28.
+const EXECUTED_FADE_WINDOW = 100;
+const EXECUTED_FADE_FLOOR  = 0.18;
 let _wcsOffset = [0, 0, 0];  // g5x + g92 offset — adds to WCS to get machine coordinates
 let _execLine = 0;           // program line currently executed (0 = nothing running)
 let _offscreen    = null;
@@ -353,6 +360,15 @@ function _feedColour(z, minZ, range) {
 
 // ---- Offscreen render (2D planes) ----
 
+// Alpha for an executed segment N lines behind the current execution line.
+// Linear decay across EXECUTED_FADE_WINDOW, clamped to EXECUTED_FADE_FLOOR.
+function _executedAlpha(segLine, exec) {
+  const dist = exec - segLine;
+  if (dist <= 0) return 1.0;
+  const t = dist / EXECUTED_FADE_WINDOW;
+  return Math.max(EXECUTED_FADE_FLOOR, 1.0 - t * (1.0 - EXECUTED_FADE_FLOOR));
+}
+
 function _renderOffscreen2D(oc) {
   const oct = oc.getContext("2d");
   const { minZ, range } = _zRange();
@@ -388,18 +404,38 @@ function _renderOffscreen2D(oc) {
     oct.beginPath(); oct.moveTo(p0.x, p0.y); oct.lineTo(p1.x, p1.y); oct.stroke();
   }
 
-  // --- Executed feed segments — green "cut" trail ---
+  // --- Executed feed segments — green "cut" trail, fading with age ---
+  // Two passes: older-than-window batched at floor alpha (one stroke),
+  // recent segments per-stroke with fading alpha. Caps per-segment stroke
+  // count at EXECUTED_FADE_WINDOW regardless of program length.
   if (exec > 0) {
-    oct.lineWidth = 1.5;
+    oct.save();
+    oct.lineWidth   = 1.5;
     oct.strokeStyle = C.cut;
+    const fadeStart = exec - EXECUTED_FADE_WINDOW;
+
+    // Batch pass: everything older than the fade window at floor alpha.
+    oct.globalAlpha = EXECUTED_FADE_FLOOR;
     oct.beginPath();
     for (const s of _segments) {
-      if (s.type !== "feed" || s.line > exec) continue;
+      if (s.type !== "feed" || s.line > exec || s.line >= fadeStart) continue;
       const [u0, v0] = _uv(mpt(s.from)), [u1, v1] = _uv(mpt(s.to));
       const p0 = _w2c(u0, v0), p1 = _w2c(u1, v1);
       oct.moveTo(p0.x, p0.y); oct.lineTo(p1.x, p1.y);
     }
     oct.stroke();
+
+    // Recent pass: per-segment alpha.
+    for (const s of _segments) {
+      if (s.type !== "feed" || s.line > exec || s.line < fadeStart) continue;
+      oct.globalAlpha = _executedAlpha(s.line, exec);
+      const [u0, v0] = _uv(mpt(s.from)), [u1, v1] = _uv(mpt(s.to));
+      const p0 = _w2c(u0, v0), p1 = _w2c(u1, v1);
+      oct.beginPath();
+      oct.moveTo(p0.x, p0.y); oct.lineTo(p1.x, p1.y);
+      oct.stroke();
+    }
+    oct.restore();
   }
 }
 
@@ -443,16 +479,32 @@ function _renderOffscreen3D(oc) {
     oct.beginPath(); oct.moveTo(s.p0.sx, s.p0.sy); oct.lineTo(s.p1.sx, s.p1.sy); oct.stroke();
   }
 
-  // --- Executed feeds — green cut trail ---
+  // --- Executed feeds — green cut trail, fading with age ---
+  // Same two-pass scheme as 2D renderer for bounded stroke count.
   if (exec > 0) {
-    oct.lineWidth = 1.5;
+    oct.save();
+    oct.lineWidth   = 1.5;
     oct.strokeStyle = C.cut;
+    const fadeStart = exec - EXECUTED_FADE_WINDOW;
+
+    // Batch pass: older-than-window at floor alpha.
+    oct.globalAlpha = EXECUTED_FADE_FLOOR;
     oct.beginPath();
     for (const s of proj) {
-      if (s.type !== "feed" || s.line > exec) continue;
+      if (s.type !== "feed" || s.line > exec || s.line >= fadeStart) continue;
       oct.moveTo(s.p0.sx, s.p0.sy); oct.lineTo(s.p1.sx, s.p1.sy);
     }
     oct.stroke();
+
+    // Recent pass: per-segment fade.
+    for (const s of proj) {
+      if (s.type !== "feed" || s.line > exec || s.line < fadeStart) continue;
+      oct.globalAlpha = _executedAlpha(s.line, exec);
+      oct.beginPath();
+      oct.moveTo(s.p0.sx, s.p0.sy); oct.lineTo(s.p1.sx, s.p1.sy);
+      oct.stroke();
+    }
+    oct.restore();
   }
 }
 
