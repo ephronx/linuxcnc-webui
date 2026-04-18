@@ -719,9 +719,9 @@ function _drawBounds3D() {
   ].map(([x, y, zz]) => _project3d(x, y, zz));
 
   ctx.save();
-  ctx.setLineDash([6, 4]);
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = C.textSec;
+  ctx.setLineDash([10, 6]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = C.yellow;
   ctx.beginPath();
   ctx.moveTo(corners[0].sx, corners[0].sy);
   for (let i = 1; i < corners.length; i++) {
@@ -729,6 +729,16 @@ function _drawBounds3D() {
   }
   ctx.closePath();
   ctx.stroke();
+
+  // Corner dots — help pick out the envelope against the grid at oblique
+  // angles where dashed edges can blend into background texture.
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.yellow;
+  for (const p of corners) {
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
