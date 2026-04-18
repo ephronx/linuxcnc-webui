@@ -168,7 +168,8 @@ Get the data flowing and commands working. UI can be ugly.
   - [x] View presets: XY / XZ / YZ planes + 3D orbit view
   - [x] Fit-to-content button (respects gcode listing panel height)
   - [x] WCS offset applied — toolpath shifts in machine space when G54 changes
-  - [x] Machine envelope bounds shown
+  - [x] Machine envelope bounds shown (2D rectangle + 3D box with prominent top face on workplane)
+  - [x] 3D ground-plane grid at WCS Z=0 — rotates with the camera, matches 2D grid step sizing
   - [x] Correct 3D coordinate orientation — Z+ up, right-hand rule
   - [x] Executed segments highlighted green; pending segments in depth-shaded blue
   - [ ] Extents readout overlay
@@ -234,6 +235,7 @@ Get the data flowing and commands working. UI can be ugly.
 - [x] WCS switching (G54–G59) via `set_work_coord`
 - [x] Jog integration with axis velocity simulation
 - [x] Tool changes (T/M6) and spindle commands (S/M3/M4/M5) resolved during program run; at_speed debounce simulates ramp-up
+- [x] Arbitrary MDI execution — motion (G0/G1, G53, G90/G91/G20/G21), WCS (G54–G59.3), spindle (M3/M4/M5+S), tool (T/M6), coolant (M7/M8/M9)
 - [x] Note: real machine uses `stat()` at 20 Hz — pos.actual interpolates smoothly between waypoints automatically
 
 ---
