@@ -650,32 +650,111 @@ function _drawAxes3D() {
   ctx.restore();
 }
 
+function _drawGrid3D() {
+  // Grid sits on the workpiece plane (WCS Z=0) — near the toolpath rather
+  // than at machine floor, so it stays visible when the camera is fit to
+  // the program bounds. Extent sized from the orbit radius so the grid
+  // always fills the viewport regardless of zoom.
+  const gridZ = _wcsOffset[2];
+
+  const W = canvas.width, H = canvas.height;
+  // Convert a half-screen distance back to world units. Multiply by √2 so
+  // the grid extends beyond a rotated canvas diagonal.
+  const worldSpan = Math.max(W, H) / _cam.scale * 1.5;
+  const cx = _cam.cx, cy = _cam.cy;
+  const x0 = cx - worldSpan, x1 = cx + worldSpan;
+  const y0 = cy - worldSpan, y1 = cy + worldSpan;
+
+  const rawStep = worldSpan / 4;   // aim ~8 major lines across the grid
+  const mag     = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const step    = ([1, 2, 5, 10].find(m => m * mag >= rawStep) ?? 10) * mag;
+  const subStep = step / 5;
+
+  ctx.save();
+  ctx.lineWidth = 1;   // thicker than 2D so projected lines read cleanly
+
+  // Sub-grid
+  ctx.strokeStyle = C.border;
+  ctx.beginPath();
+  for (let x = Math.ceil(x0 / subStep) * subStep; x <= x1; x += subStep) {
+    const p0 = _project3d(x, y0, gridZ);
+    const p1 = _project3d(x, y1, gridZ);
+    ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
+  }
+  for (let y = Math.ceil(y0 / subStep) * subStep; y <= y1; y += subStep) {
+    const p0 = _project3d(x0, y, gridZ);
+    const p1 = _project3d(x1, y, gridZ);
+    ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
+  }
+  ctx.stroke();
+
+  // Major grid
+  ctx.strokeStyle = C.borderHi;
+  ctx.beginPath();
+  for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
+    const p0 = _project3d(x, y0, gridZ);
+    const p1 = _project3d(x, y1, gridZ);
+    ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
+  }
+  for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
+    const p0 = _project3d(x0, y, gridZ);
+    const p1 = _project3d(x1, y, gridZ);
+    ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function _drawBounds3D() {
   if (!_bounds) return;
   const [x0, x1] = _bounds.X, [y0, y1] = _bounds.Y, [z0, z1] = _bounds.Z;
 
-  // 8 corners of the machine envelope
-  const c = [
-    [x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],
-    [x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],
-  ].map(([x,y,z]) => _project3d(x, y, z));
+  // Full 12-edge machine envelope. Top face (Z=z1, typically machine zero)
+  // stays prominent so the envelope is findable even when fit-to-part zoom
+  // pushes the bottom face off-screen. Vertical edges + bottom face render
+  // dimmer — visible when the user zooms out.
+  const corners = [
+    [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],   // bottom (z-min)
+    [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],   // top    (z-max)
+  ].map(([x, y, z]) => _project3d(x, y, z));
 
-  const edges = [
-    [0,1],[1,2],[2,3],[3,0],   // Z-min face
-    [4,5],[5,6],[6,7],[7,4],   // Z-max face
-    [0,4],[1,5],[2,6],[3,7],   // verticals
-  ];
+  const topFace   = [[4, 5], [5, 6], [6, 7], [7, 4]];
+  const botFace   = [[0, 1], [1, 2], [2, 3], [3, 0]];
+  const verticals = [[0, 4], [1, 5], [2, 6], [3, 7]];
+
+  const drawEdges = (edges) => {
+    ctx.beginPath();
+    for (const [a, b] of edges) {
+      ctx.moveTo(corners[a].sx, corners[a].sy);
+      ctx.lineTo(corners[b].sx, corners[b].sy);
+    }
+    ctx.stroke();
+  };
 
   ctx.save();
-  ctx.setLineDash([4, 4]);
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = C.textSec;
-  ctx.beginPath();
-  for (const [a, b] of edges) {
-    ctx.moveTo(c[a].sx, c[a].sy);
-    ctx.lineTo(c[b].sx, c[b].sy);
+  ctx.setLineDash([10, 6]);
+
+  // Dim lower box + verticals — off-screen at fit-to-part is harmless.
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.35;
+  ctx.strokeStyle = C.yellow;
+  drawEdges([...botFace, ...verticals]);
+  ctx.globalAlpha = 1;
+
+  // Prominent top face — the one that sits near the toolpath and must
+  // always be findable.
+  ctx.lineWidth = 2;
+  drawEdges(topFace);
+
+  // Corner dots on the top face only — keep the visual anchors without
+  // crowding the render when zoomed out.
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.yellow;
+  for (let i = 4; i < 8; i++) {
+    ctx.beginPath();
+    ctx.arc(corners[i].sx, corners[i].sy, 3, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -727,6 +806,7 @@ function _render() {
   ctx.fillRect(0, 0, W, H);
 
   if (_plane === "3D") {
+    _drawGrid3D();
     _drawBounds3D();
     _drawAxes3D();
   } else {
