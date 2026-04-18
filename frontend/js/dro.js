@@ -40,7 +40,10 @@ const errorLog         = document.getElementById("error-log");
 const stripStateBadge  = document.getElementById("strip-state-badge");
 const stripWcs         = document.getElementById("strip-wcs");
 const stripTool        = document.getElementById("strip-tool");
+const stripToolZ       = document.getElementById("strip-tool-z");
 const stripRpm         = document.getElementById("strip-rpm");
+const stripRpmDir      = document.getElementById("strip-rpm-dir");
+const stripRpmDot      = document.getElementById("strip-rpm-dot");
 const stripModeWcs     = document.getElementById("strip-mode-wcs");
 const stripModeAbs     = document.getElementById("strip-mode-abs");
 const stripRoot        = document.getElementById("persistent-strip");
@@ -249,16 +252,44 @@ function _updateSpindle(s) {
   if (led) led.className = `led ${sp.enabled ? "on-green" : ""}`;
   if (disp) disp.textContent = `${Math.abs(sp.speed).toFixed(0)} rpm`;
   if (stripRpm) stripRpm.textContent = `${Math.abs(sp.speed).toFixed(0)}`;
+
+  if (stripRpmDir) {
+    // direction: >0 = CW (M3), <0 = CCW (M4), 0 = stopped. Infer from sign of
+    // speed when direction field is absent.
+    const dir = sp.direction ?? Math.sign(sp.speed);
+    if (!sp.enabled || dir === 0) {
+      stripRpmDir.textContent = "";
+      stripRpmDir.className   = "strip-rpm-dir";
+    } else if (dir > 0) {
+      stripRpmDir.textContent = "\u21bb";   // ↻ CW
+      stripRpmDir.className   = "strip-rpm-dir cw";
+    } else {
+      stripRpmDir.textContent = "\u21ba";   // ↺ CCW
+      stripRpmDir.className   = "strip-rpm-dir ccw";
+    }
+  }
+
+  if (stripRpmDot) {
+    if (!sp.enabled) {
+      stripRpmDot.className = "strip-rpm-dot hidden";
+    } else if (sp.at_speed) {
+      stripRpmDot.className = "strip-rpm-dot at-speed";
+    } else {
+      stripRpmDot.className = "strip-rpm-dot";
+    }
+  }
 }
 
 // ---- Tool display ----
 
 function _updateTool(s) {
   if (s.tool) {
-    const n = s.tool.number ?? 0;
+    const n  = s.tool.number ?? 0;
+    const tz = (s.tool.offset?.[2] ?? 0).toFixed(_decimalPlaces);
     if (toolNumber)  toolNumber.textContent  = n;
-    if (toolOffsetZ) toolOffsetZ.textContent = (s.tool.offset?.[2] ?? 0).toFixed(_decimalPlaces);
+    if (toolOffsetZ) toolOffsetZ.textContent = tz;
     if (stripTool)   stripTool.textContent   = n;
+    if (stripToolZ)  stripToolZ.textContent  = `Z ${tz}`;
   }
 }
 
