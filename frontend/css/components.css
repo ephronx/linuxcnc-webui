@@ -220,6 +220,18 @@ input[type="range"]::-moz-range-thumb {
 
 .mdi-input:focus { border-color: var(--accent); }
 
+/* MDI history entries — clickable to copy back into the input. */
+.mdi-history-entry {
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0 var(--gap-sm);
+  border-radius: var(--radius);
+}
+.mdi-history-entry:hover {
+  background: var(--bg-3);
+  color: var(--accent);
+}
+
 /* ---- Status bar (bottom of screen) ---- */
 #status-bar {
   padding: 0.25rem var(--gap-lg);

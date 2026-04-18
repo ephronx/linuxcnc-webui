@@ -36,21 +36,63 @@ document.getElementById("btn-unhome-all")?.addEventListener("click", () => {
 
 const mdiInput   = document.getElementById("mdi-input");
 const mdiHistory = document.getElementById("mdi-history");
-const mdiHistory_ = [];
+const MDI_HISTORY_KEY   = "webui:mdiHistory";
+const MDI_HISTORY_LIMIT = 100;
+
+function _loadHistory() {
+  try {
+    const raw = localStorage.getItem(MDI_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(v => typeof v === "string") : [];
+  } catch {
+    return [];   // private mode, quota, or malformed JSON
+  }
+}
+
+function _saveHistory() {
+  try {
+    localStorage.setItem(MDI_HISTORY_KEY, JSON.stringify(mdiHistory_));
+  } catch {
+    // Storage disabled/full — history still works in-memory for this session.
+  }
+}
+
+const mdiHistory_ = _loadHistory();
+
+function _appendHistoryLine(gcode) {
+  if (!mdiHistory) return;
+  const line = document.createElement("div");
+  line.className   = "mdi-history-entry";
+  line.textContent = `> ${gcode}`;
+  line.title       = "Click to copy to input";
+  line.addEventListener("click", () => {
+    mdiInput.value = gcode;
+    mdiInput.focus();
+    // Place cursor at end so the operator can edit immediately.
+    const n = mdiInput.value.length;
+    mdiInput.setSelectionRange(n, n);
+    _histIdx = -1;   // break out of arrow-key navigation
+  });
+  mdiHistory.appendChild(line);
+  mdiHistory.scrollTop = mdiHistory.scrollHeight;
+}
+
+// Re-hydrate visible panel from loaded history
+mdiHistory_.forEach(_appendHistoryLine);
 
 function _sendMDI() {
   const gcode = mdiInput.value.trim();
   if (!gcode) return;
   send({ cmd: "mdi", gcode });
   mdiHistory_.push(gcode);
-  if (mdiHistory_.length > 100) mdiHistory_.shift();
-  if (mdiHistory) {
-    const line = document.createElement("div");
-    line.textContent = `> ${gcode}`;
-    line.style.color = "var(--text-primary)";
-    mdiHistory.appendChild(line);
-    mdiHistory.scrollTop = mdiHistory.scrollHeight;
+  if (mdiHistory_.length > MDI_HISTORY_LIMIT) {
+    mdiHistory_.shift();
+    // Drop the oldest DOM entry to stay in sync with the array.
+    mdiHistory?.firstElementChild?.remove();
   }
+  _appendHistoryLine(gcode);
+  _saveHistory();
   mdiInput.value = "";
 }
 
