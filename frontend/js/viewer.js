@@ -651,46 +651,54 @@ function _drawAxes3D() {
 }
 
 function _drawGrid3D() {
-  if (!_bounds) return;
-  const [x0, x1] = _bounds.X, [y0, y1] = _bounds.Y;
-  const floorZ   = _bounds.Z[0];
+  // Grid sits on the workpiece plane (WCS Z=0) — near the toolpath rather
+  // than at machine floor, so it stays visible when the camera is fit to
+  // the program bounds. Extent sized from the orbit radius so the grid
+  // always fills the viewport regardless of zoom.
+  const gridZ = _wcsOffset[2];
 
-  // Reuse the 2D step-sizing heuristic so 3D grid density matches at any zoom.
-  const worldSpan = Math.max(x1 - x0, y1 - y0);
-  const rawStep   = worldSpan / 8;
-  const mag       = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const step      = ([1, 2, 5, 10].find(m => m * mag >= rawStep) ?? 10) * mag;
-  const subStep   = step / 5;
+  const W = canvas.width, H = canvas.height;
+  // Convert a half-screen distance back to world units. Multiply by √2 so
+  // the grid extends beyond a rotated canvas diagonal.
+  const worldSpan = Math.max(W, H) / _cam.scale * 1.5;
+  const cx = _cam.cx, cy = _cam.cy;
+  const x0 = cx - worldSpan, x1 = cx + worldSpan;
+  const y0 = cy - worldSpan, y1 = cy + worldSpan;
+
+  const rawStep = worldSpan / 4;   // aim ~8 major lines across the grid
+  const mag     = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const step    = ([1, 2, 5, 10].find(m => m * mag >= rawStep) ?? 10) * mag;
+  const subStep = step / 5;
 
   ctx.save();
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 1;   // thicker than 2D so projected lines read cleanly
 
-  // Sub-grid (lighter)
-  ctx.strokeStyle = C.grid;
+  // Sub-grid
+  ctx.strokeStyle = C.border;
   ctx.beginPath();
   for (let x = Math.ceil(x0 / subStep) * subStep; x <= x1; x += subStep) {
-    const p0 = _project3d(x, y0, floorZ);
-    const p1 = _project3d(x, y1, floorZ);
+    const p0 = _project3d(x, y0, gridZ);
+    const p1 = _project3d(x, y1, gridZ);
     ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
   }
   for (let y = Math.ceil(y0 / subStep) * subStep; y <= y1; y += subStep) {
-    const p0 = _project3d(x0, y, floorZ);
-    const p1 = _project3d(x1, y, floorZ);
+    const p0 = _project3d(x0, y, gridZ);
+    const p1 = _project3d(x1, y, gridZ);
     ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
   }
   ctx.stroke();
 
-  // Major grid (brighter)
-  ctx.strokeStyle = C.gridHi;
+  // Major grid
+  ctx.strokeStyle = C.borderHi;
   ctx.beginPath();
   for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
-    const p0 = _project3d(x, y0, floorZ);
-    const p1 = _project3d(x, y1, floorZ);
+    const p0 = _project3d(x, y0, gridZ);
+    const p1 = _project3d(x, y1, gridZ);
     ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
   }
   for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) {
-    const p0 = _project3d(x0, y, floorZ);
-    const p1 = _project3d(x1, y, floorZ);
+    const p0 = _project3d(x0, y, gridZ);
+    const p1 = _project3d(x1, y, gridZ);
     ctx.moveTo(p0.sx, p0.sy); ctx.lineTo(p1.sx, p1.sy);
   }
   ctx.stroke();
