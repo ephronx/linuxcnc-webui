@@ -233,6 +233,7 @@ Get the data flowing and commands working. UI can be ugly.
 - [x] G10 L20 touch-off correctly computes WCS offsets
 - [x] WCS switching (G54–G59) via `set_work_coord`
 - [x] Jog integration with axis velocity simulation
+- [x] Tool changes (T/M6) and spindle commands (S/M3/M4/M5) resolved during program run; at_speed debounce simulates ramp-up
 - [x] Note: real machine uses `stat()` at 20 Hz — pos.actual interpolates smoothly between waypoints automatically
 
 ---
