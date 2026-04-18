@@ -225,3 +225,76 @@ onUpdate((s) => {
     });
   }
 });
+
+// ---- Viewer / panel-below splitter ----
+// Lets the operator resize the toolpath viewer vs the gcode listing / MDI
+// history / auto controls below it. Persists the chosen height in
+// localStorage. Double-click returns to the default flex ratio.
+
+const VIEWER_HEIGHT_KEY = "webui:viewerHeightPx";
+const splitter      = document.getElementById("viewer-splitter");
+const sharedViewer  = document.getElementById("shared-viewer");
+const panelMain     = document.getElementById("panel-main");
+
+function _applyViewerHeight(px) {
+  if (!sharedViewer) return;
+  // flex:0 0 {px}px pins the viewer to this height; the panel below fills
+  // whatever space remains. Clamped by min-height in the CSS.
+  sharedViewer.style.flex = `0 0 ${px}px`;
+}
+
+function _resetViewerHeight() {
+  if (!sharedViewer) return;
+  sharedViewer.style.flex = "";   // revert to stylesheet default (3 1 0)
+  try { localStorage.removeItem(VIEWER_HEIGHT_KEY); } catch {}
+}
+
+// Restore any previously saved height on load.
+try {
+  const saved = localStorage.getItem(VIEWER_HEIGHT_KEY);
+  if (saved) {
+    const px = parseInt(saved, 10);
+    if (Number.isFinite(px) && px > 0) _applyViewerHeight(px);
+  }
+} catch {}
+
+if (splitter && sharedViewer && panelMain) {
+  let dragging = false;
+
+  splitter.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    splitter.setPointerCapture(e.pointerId);
+    splitter.classList.add("dragging");
+    e.preventDefault();
+  });
+
+  splitter.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    // New viewer height = mouse Y relative to the top of panel-main, minus
+    // the tab-bar height (which sits above #shared-viewer inside panel-main).
+    const rect   = panelMain.getBoundingClientRect();
+    const tabBar = document.getElementById("tab-bar");
+    const tabBarH = tabBar ? tabBar.getBoundingClientRect().height : 0;
+    // Respect the panel-main bottom so the panel below doesn't collapse to
+    // zero; reserve 6rem (~96px) of minimum space for it.
+    const maxH = rect.height - tabBarH - 96;
+    const rawH = e.clientY - rect.top - tabBarH;
+    const h    = Math.max(96, Math.min(maxH, rawH));
+    _applyViewerHeight(h);
+  });
+
+  const _endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove("dragging");
+    splitter.releasePointerCapture?.(e.pointerId);
+    // Persist final height.
+    const h = sharedViewer.getBoundingClientRect().height;
+    try { localStorage.setItem(VIEWER_HEIGHT_KEY, String(Math.round(h))); } catch {}
+  };
+  splitter.addEventListener("pointerup",     _endDrag);
+  splitter.addEventListener("pointercancel", _endDrag);
+
+  // Double-click → reset to stylesheet default flex ratio.
+  splitter.addEventListener("dblclick", _resetViewerHeight);
+}

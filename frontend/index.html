@@ -185,6 +185,11 @@
         <canvas id="viewer-canvas"></canvas>
       </div>
 
+      <!-- Draggable splitter between the viewer and whatever tab panel sits
+           below it (gcode listing, MDI history, auto-controls). Hidden
+           automatically when the viewer is hidden via the CSS sibling rule. -->
+      <div id="viewer-splitter" title="Drag to resize — double-click to reset"></div>
+
       <!-- ══════════════════════════════════════════════════════════
            MDI control strip
            Shown below the viewer when MDI tab is active.
