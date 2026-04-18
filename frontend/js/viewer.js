@@ -185,6 +185,16 @@ function _fitTo3D() {
     mnZ = _bounds?.Z[0] ?? -200; mxZ = _bounds?.Z[1] ?? 0;
   }
 
+  // Expand the XY fit to include the machine envelope — otherwise a small
+  // part fits the viewport but the envelope corners sit beyond its edges
+  // and the user loses the spatial reference. Z stays on the part range so
+  // the camera doesn't zoom out unnecessarily for a shallow engraving on
+  // a machine with 200mm of Z travel.
+  if (_bounds) {
+    mnX = Math.min(mnX, _bounds.X[0]); mxX = Math.max(mxX, _bounds.X[1]);
+    mnY = Math.min(mnY, _bounds.Y[0]); mxY = Math.max(mxY, _bounds.Y[1]);
+  }
+
   // Orbit centre at bounding box centroid
   _cam.cx = (mnX + mxX) / 2;
   _cam.cy = (mnY + mxY) / 2;
