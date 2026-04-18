@@ -111,6 +111,101 @@ def _parse_program(path: str):
     }
 
 
+def _apply_mdi_line(m: dict, gcode: str) -> bool:
+    """Execute a single MDI G-code line against the mock machine state.
+
+    Handles a pragmatic subset — enough to demo tool changes, spindle ops,
+    coolant, and motion from the MDI tab without loading a program. Unknown
+    input is silently accepted (returns False).
+
+    Returns True if the line matched a known pattern and the mock state
+    was mutated.
+    """
+    line = _re.sub(r'\(.*?\)', '', gcode).split(';')[0].strip().upper()
+    if not line:
+        return False
+
+    words    = {mm.group(1): float(mm.group(2))
+                for mm in _re.finditer(r'([A-Z])\s*(-?\d*\.?\d+)', line)}
+    m_codes  = [int(round(float(mm.group(1))))
+                for mm in _re.finditer(r'M\s*(\d+)', line)]
+    # Collect ALL G words on this line — the words-dict above loses earlier
+    # ones when multiple appear (e.g. "G90 G0 X10").
+    g_codes  = [float(mm.group(1))
+                for mm in _re.finditer(r'G\s*(\d+(?:\.\d+)?)', line)]
+
+    # G53: single-line modifier — motion uses machine coords, no WCS offset.
+    use_machine_coords = any(abs(g - 53.0) < 0.01 for g in g_codes)
+
+    # Persistent modals (G90/G91/G20/G21)
+    for g in g_codes:
+        if g == 90:  m["mdi_abs_mode"] = True
+        if g == 91:  m["mdi_abs_mode"] = False
+        if g == 20:  m["mdi_scale"] = 25.4
+        if g == 21:  m["mdi_scale"] = 1.0
+
+    # WCS selection — G54…G59.3 map to g5x_index 1…9.
+    wcs_map = {54.0: 1, 55.0: 2, 56.0: 3, 57.0: 4, 58.0: 5, 59.0: 6,
+               59.1: 7, 59.2: 8, 59.3: 9}
+    for g in g_codes:
+        if g in wcs_map:
+            m["g5x_index"] = wcs_map[g]
+
+    if 'T' in words:
+        m["mdi_pending_tool"] = int(words['T'])
+    if 'S' in words:
+        m["mdi_current_s"] = float(words['S'])
+
+    now = time.time()
+    if 6 in m_codes:
+        tool = m["mdi_pending_tool"] if m["mdi_pending_tool"] is not None else m["tool_number"]
+        m["tool_number"]      = tool
+        m["mdi_pending_tool"] = None
+    if 3 in m_codes:
+        m["spindle_speed"]      = m["mdi_current_s"]
+        m["spindle_direction"]  = 1
+        m["spindle_enabled"]    = True
+        m["spindle_changed_at"] = now
+    if 4 in m_codes:
+        m["spindle_speed"]      = -m["mdi_current_s"]
+        m["spindle_direction"]  = -1
+        m["spindle_enabled"]    = True
+        m["spindle_changed_at"] = now
+    if 5 in m_codes:
+        m["spindle_speed"]      = 0.0
+        m["spindle_direction"]  = 0
+        m["spindle_enabled"]    = False
+        m["spindle_changed_at"] = now
+    if 7 in m_codes:
+        m["mist"] = True
+    if 8 in m_codes:
+        m["flood"] = True
+    if 9 in m_codes:
+        m["mist"]  = False
+        m["flood"] = False
+
+    # Motion — G0/G1 with any X/Y/Z word. Mock treats moves as instant.
+    axis_map = {'X': 0, 'Y': 1, 'Z': 2}
+    has_xyz    = any(k in words for k in axis_map)
+    has_motion = any(g in (0.0, 1.0) for g in g_codes)
+    if has_xyz and has_motion:
+        new_pos = list(m["pos"])
+        for ax_name, ax_idx in axis_map.items():
+            if ax_name not in words:
+                continue
+            val = words[ax_name] * m["mdi_scale"]
+            if use_machine_coords:
+                new_pos[ax_idx] = val
+            elif m["mdi_abs_mode"]:
+                off = m["g5x_offsets"][m["g5x_index"]][ax_idx]
+                new_pos[ax_idx] = val + off
+            else:
+                new_pos[ax_idx] += val
+        m["pos"] = new_pos
+
+    return True
+
+
 class MachineBridge:
     def __init__(self):
         self._stat = None
@@ -169,6 +264,13 @@ class MachineBridge:
             # time.time() when commanded spindle state last changed; used to
             # simulate the ~500ms ramp-up before at_speed flips true.
             "spindle_changed_at": 0.0,
+            # MDI session modals — persist across MDI lines (LinuxCNC behaviour).
+            # G90/G91 → abs_mode; G20/G21 → scale. G54–G59.3 modals live in
+            # g5x_index. T word latches here until M6 consumes it.
+            "mdi_abs_mode":     True,
+            "mdi_scale":        1.0,
+            "mdi_pending_tool": None,
+            "mdi_current_s":    0.0,
         }
 
     # ------------------------------------------------------------------
@@ -606,6 +708,9 @@ class MachineBridge:
                         ai = axis_map.get(am.group(1), -1)
                         if ai >= 0:
                             m["g5x_offsets"][p][ai] = pos[ai] - float(am.group(2))
+            else:
+                # Motion / spindle / tool / coolant / WCS execution in mock.
+                _apply_mdi_line(m, gcode)
 
         elif op == "program_open":
             if m.get("program_running"):

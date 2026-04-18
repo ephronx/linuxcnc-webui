@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
-from bridge import MachineBridge, _parse_program
+from bridge import MachineBridge, _parse_program, _apply_mdi_line
 
 
 # ---- Helpers ----
@@ -669,3 +669,196 @@ class TestSpindleMdiOps:
         assert s["enabled"] is False
         assert s["speed"] == 0.0
         assert s["direction"] == 0
+
+
+# ---- MDI G-code execution in mock ----
+
+class TestMdiMotion:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        _cmd(b, "home_all")
+        return b
+
+    def test_g0_absolute_updates_position(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G0 X10 Y20")
+        s = _build(b)
+        assert s["pos"]["actual"][0] == pytest.approx(10.0)
+        assert s["pos"]["actual"][1] == pytest.approx(20.0)
+
+    def test_g1_absolute_updates_position(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G1 Z-5 F100")
+        assert _build(b)["pos"]["actual"][2] == pytest.approx(-5.0)
+
+    def test_g91_incremental_accumulates(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G91")
+        _cmd(b, "mdi", gcode="G1 X5")
+        _cmd(b, "mdi", gcode="G1 X3")
+        assert _build(b)["pos"]["actual"][0] == pytest.approx(8.0)
+
+    def test_g90_after_g91_switches_back_to_absolute(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G91")
+        _cmd(b, "mdi", gcode="G1 X5")   # pos = 5
+        _cmd(b, "mdi", gcode="G90")
+        _cmd(b, "mdi", gcode="G0 X2")   # should go to 2, not 7
+        assert _build(b)["pos"]["actual"][0] == pytest.approx(2.0)
+
+    def test_g90_g0_xy_combined_on_one_line(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G91")       # switch to incremental first
+        _cmd(b, "mdi", gcode="G90 G0 X10 Y15")  # one-liner resets to abs + moves
+        s = _build(b)["pos"]["actual"]
+        assert s[0] == pytest.approx(10.0)
+        assert s[1] == pytest.approx(15.0)
+
+    def test_motion_in_wcs_applies_offset(self):
+        b = self._ready()
+        # Poke a G55 offset: work zero is at machine (100, 50).
+        b._mock["g5x_offsets"][2] = [100.0, 50.0, 0.0, 0, 0, 0, 0, 0, 0]
+        _cmd(b, "mdi", gcode="G55")
+        _cmd(b, "mdi", gcode="G0 X0 Y0")
+        s = _build(b)["pos"]["actual"]
+        assert s[0] == pytest.approx(100.0)
+        assert s[1] == pytest.approx(50.0)
+
+    def test_g53_bypasses_wcs_offset(self):
+        b = self._ready()
+        b._mock["g5x_offsets"][1] = [100.0, 50.0, 0.0, 0, 0, 0, 0, 0, 0]
+        _cmd(b, "mdi", gcode="G53 G0 Z0")
+        assert _build(b)["pos"]["actual"][2] == pytest.approx(0.0)
+
+    def test_g20_imperial_scales_input(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G20")       # switch to inches
+        _cmd(b, "mdi", gcode="G0 X1")     # 1 inch = 25.4 mm
+        assert _build(b)["pos"]["actual"][0] == pytest.approx(25.4)
+
+
+class TestMdiSpindle:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        return b
+
+    def test_m3_starts_cw(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="M3 S4000")
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is True
+        assert s["direction"] == 1
+        assert s["speed"] == 4000.0
+
+    def test_m4_starts_ccw(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="S3000 M4")
+        s = _build(b)["spindle"][0]
+        assert s["direction"] == -1
+        assert s["speed"] == -3000.0
+
+    def test_m5_stops(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="M3 S4000")
+        _cmd(b, "mdi", gcode="M5")
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is False
+        assert s["speed"] == 0.0
+
+    def test_s_word_alone_then_m3_later(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="S5000")     # latches pending speed
+        _cmd(b, "mdi", gcode="M3")        # applies it
+        assert _build(b)["spindle"][0]["speed"] == 5000.0
+
+
+class TestMdiTool:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        return b
+
+    def test_m6_tn_changes_tool(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="T3 M6")
+        assert _build(b)["tool"]["number"] == 3
+
+    def test_t_without_m6_does_not_change_tool(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="T5")
+        assert _build(b)["tool"]["number"] == 0
+
+    def test_bare_m6_uses_last_latched_t(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="T7")   # latch
+        _cmd(b, "mdi", gcode="M6")   # consume
+        assert _build(b)["tool"]["number"] == 7
+
+
+class TestMdiCoolant:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        return b
+
+    def test_m8_enables_flood(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="M8")
+        assert _build(b)["coolant"]["flood"] is True
+
+    def test_m7_enables_mist(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="M7")
+        assert _build(b)["coolant"]["mist"] is True
+
+    def test_m9_clears_both(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="M8")
+        _cmd(b, "mdi", gcode="M7")
+        _cmd(b, "mdi", gcode="M9")
+        c = _build(b)["coolant"]
+        assert c["flood"] is False
+        assert c["mist"]  is False
+
+
+class TestMdiWcs:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        return b
+
+    def test_g55_switches_wcs(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G55")
+        assert _build(b)["pos"]["g5x_index"] == 2
+
+    def test_g59_3_switches_wcs(self):
+        b = self._ready()
+        _cmd(b, "mdi", gcode="G59.3")
+        assert _build(b)["pos"]["g5x_index"] == 9
+
+
+class TestMdiTouchOffRegression:
+    """G10 L20 touch-off must still work after the MDI-execution path was added."""
+
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        _cmd(b, "home_all")
+        return b
+
+    def test_touch_off_still_sets_wcs_offset(self):
+        b = self._ready()
+        # Move to machine (20, 0, 0) first, then declare "this is X=5 in G54".
+        _cmd(b, "mdi", gcode="G0 X20")
+        _cmd(b, "mdi", gcode="G10 L20 P1 X5")
+        # Offset should now be 20 - 5 = 15
+        assert b._mock["g5x_offsets"][1][0] == pytest.approx(15.0)
