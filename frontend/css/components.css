@@ -220,6 +220,37 @@ input[type="range"]::-moz-range-thumb {
 
 .mdi-input:focus { border-color: var(--accent); }
 
+/* MDI history entries — clickable to copy back into the input. */
+.mdi-history-entry {
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0 var(--gap-sm);
+  border-radius: var(--radius);
+  border-left: 2px solid transparent;   /* reserves space so .selected doesn't shift layout */
+}
+.mdi-history-entry:hover {
+  background: var(--bg-3);
+  color: var(--accent);
+}
+.mdi-history-entry.selected {
+  background: var(--bg-3);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+/* MDI history header row — section title + Clear button. */
+.mdi-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin-bottom: var(--gap-sm);
+}
+.mdi-history-clear {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.55rem;
+}
+
 /* ---- Status bar (bottom of screen) ---- */
 #status-bar {
   padding: 0.25rem var(--gap-lg);
