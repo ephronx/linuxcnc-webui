@@ -22,7 +22,12 @@ const vposX    = document.getElementById("vpos-x");
 const vposY    = document.getElementById("vpos-y");
 const vposZ    = document.getElementById("vpos-z");
 const fitBtn        = document.getElementById("btn-viewer-fit");
+const resetBtn      = document.getElementById("btn-viewer-reset");
 const clearTrailBtn = document.getElementById("btn-viewer-clear-trail");
+
+// Default orbit: looking from the front-right, camera tilted 45° down.
+// Matches the "isometric-ish" orientation most CAM tools use by default.
+const DEFAULT_ROT3D = { az: -30, el: 45 };
 const statusEl = document.getElementById("viewer-status");
 
 if (!canvas) throw new Error("viewer-canvas not found");
@@ -79,7 +84,7 @@ let _cam = { cx: 0, cy: 0, cz: 0, scale: 5 };
 
 // 3D orbit rotation (degrees).  azimuth rotates around Z (turntable);
 // elevation tilts the view up/down.  Clamped to [-89, 89] for elevation.
-let _rot3d = { az: -30, el: 25 };
+let _rot3d = { ...DEFAULT_ROT3D };
 
 // ---- Plane helpers (2D modes) ----
 
@@ -998,6 +1003,17 @@ document.querySelectorAll(".viewer-plane-btn").forEach(btn => {
 // ---- Fit button ----
 
 fitBtn?.addEventListener("click", () => {
+  _fitToContent();
+  _scheduleRender();
+});
+
+// Reset — restore the default orbit angle AND fit. Use when the camera
+// has been rotated into a disorienting position (e.g. upside-down) and
+// you want to get back to a known-good view in one click.
+resetBtn?.addEventListener("click", () => {
+  _rot3d.az = DEFAULT_ROT3D.az;
+  _rot3d.el = DEFAULT_ROT3D.el;
+  _offscreenCam = null;   // force re-render under new orientation
   _fitToContent();
   _scheduleRender();
 });
