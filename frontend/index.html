@@ -192,7 +192,11 @@
           <button class="btn btn-primary" id="btn-mdi-send">Send</button>
         </div>
         <div style="flex:1; overflow-y:auto; padding:var(--gap-sm) var(--gap); border-top:1px solid var(--border)">
-          <div class="section-title">History</div>
+          <div class="mdi-history-header">
+            <span class="section-title">History</span>
+            <button class="btn btn-default mdi-history-clear" id="btn-mdi-history-clear"
+                    title="Clear MDI history — safe to press at any time, including during a run">Clear</button>
+          </div>
           <div id="mdi-history" style="font-family:var(--font-mono); font-size:0.75rem; line-height:1.6"></div>
         </div>
       </div>

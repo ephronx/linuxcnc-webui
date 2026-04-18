@@ -101,6 +101,21 @@ mdiInput?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") _sendMDI();
 });
 
+// Clear button — wipes the visible panel, the in-memory array, and storage.
+// Safe to press at any time including during a run (clears display only,
+// never affects the machine).
+const mdiClearBtn = document.getElementById("btn-mdi-history-clear");
+if (mdiClearBtn) {
+  mdiClearBtn.addEventListener("click", () => {
+    mdiHistory_.length = 0;
+    if (mdiHistory) mdiHistory.innerHTML = "";
+    try { localStorage.removeItem(MDI_HISTORY_KEY); } catch {}
+    _histIdx = -1;
+  });
+  // Never gated by machine state — pure display action.
+  mdiClearBtn.disabled = false;
+}
+
 // MDI history navigation (up/down arrows)
 let _histIdx = -1;
 mdiInput?.addEventListener("keydown", (e) => {
