@@ -23,17 +23,32 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def _parse_waypoints(path: str):
-    """Parse a G-code file and return (waypoints, waypoint_lines).
+def _parse_program(path: str):
+    """Parse a G-code file and return a dict with waypoints + tool/spindle events.
 
-    waypoints  — list of (line_num, x, y, z) in WCS mm, sorted by line_num
-    waypoint_lines — list of just the line numbers (for bisect lookups)
+    Returns:
+        waypoints       — list of (line_num, x, y, z) in WCS mm
+        waypoint_lines  — [line_num, ...] parallel list for bisect
+        tool_events     — list of (line_num, tool_number) for every M6 tool change
+        tool_lines      — parallel bisect list
+        spindle_events  — list of (line_num, speed, direction) where direction
+                          is +1 for M3 (CW), -1 for M4 (CCW), 0 for M5 (stop).
+                          speed carries the last-seen S word; 0 after M5.
+        spindle_lines   — parallel bisect list
     """
-    waypoints = []
+    waypoints      = []
+    tool_events    = []
+    spindle_events = []
     x, y, z = 0.0, 0.0, 0.0
     abs_mode = True
     scale    = 1.0
     motion   = 0
+    # T word latches; M6 consumes the latched tool. Bare M6 with no prior T
+    # falls back to the last-seen T (standard LinuxCNC behaviour).
+    pending_tool = None
+    last_tool    = 0
+    # Current commanded spindle speed from S words. M3/M4 apply it; M5 zeros.
+    current_s = 0.0
     try:
         with open(path) as f:
             for line_num, raw in enumerate(f, 1):
@@ -49,6 +64,30 @@ def _parse_waypoints(path: str):
                     if g == 91: abs_mode = False
                     if g == 20: scale = 25.4
                     if g == 21: scale = 1.0
+                # T word — latch for next M6
+                if 'T' in words:
+                    pending_tool = int(words['T'])
+                # S word — update current commanded speed (affects the next M3/M4)
+                if 'S' in words:
+                    current_s = float(words['S'])
+                # M-codes: multiple M words can appear on one line so scan the
+                # raw text rather than the dedup'd dict.
+                m_codes = [int(round(float(m.group(1))))
+                           for m in _re.finditer(r'M\s*(\d+)', line)]
+                if 6 in m_codes:
+                    tool = pending_tool if pending_tool is not None else last_tool
+                    tool_events.append((line_num, tool))
+                    last_tool    = tool
+                    pending_tool = None
+                if 3 in m_codes:
+                    spindle_events.append((line_num, current_s, 1))
+                if 4 in m_codes:
+                    spindle_events.append((line_num, current_s, -1))
+                if 5 in m_codes:
+                    spindle_events.append((line_num, 0.0, 0))
+                # M30 / M2 — program end implies M5
+                if 30 in m_codes or 2 in m_codes:
+                    spindle_events.append((line_num, 0.0, 0))
                 if not any(k in words for k in ('X', 'Y', 'Z')):
                     continue
                 if abs_mode:
@@ -61,9 +100,15 @@ def _parse_waypoints(path: str):
                     if 'Z' in words: z += words['Z'] * scale
                 waypoints.append((line_num, x, y, z))
     except Exception as e:
-        log.warning(f"Could not parse waypoints from {path}: {e}")
-    lines = [w[0] for w in waypoints]
-    return waypoints, lines
+        log.warning(f"Could not parse program {path}: {e}")
+    return {
+        "waypoints":      waypoints,
+        "waypoint_lines": [w[0] for w in waypoints],
+        "tool_events":    tool_events,
+        "tool_lines":     [t[0] for t in tool_events],
+        "spindle_events": spindle_events,
+        "spindle_lines":  [s[0] for s in spindle_events],
+    }
 
 
 class MachineBridge:
@@ -106,6 +151,24 @@ class MachineBridge:
             # Parsed waypoints for position simulation
             "program_waypoints":     [],    # [(line_num, x, y, z), ...] WCS mm
             "program_waypoint_lines":[],    # [line_num, ...] parallel list for bisect
+            # Parsed tool changes — (line_num, tool_number). Bisect at the
+            # current program line to find the active tool during run.
+            "program_tool_events":   [],
+            "program_tool_lines":    [],
+            # Parsed spindle events — (line_num, speed, direction). Direction:
+            # +1 M3 CW, -1 M4 CCW, 0 M5/end-of-program.
+            "program_spindle_events": [],
+            "program_spindle_lines":  [],
+            # Current mock tool state — persists across programs the way a
+            # real tool stays in the spindle after M30.
+            "tool_number": 0,
+            # Current mock spindle state — set by program events or MDI ops.
+            "spindle_speed":     0.0,
+            "spindle_direction": 0,
+            "spindle_enabled":   False,
+            # time.time() when commanded spindle state last changed; used to
+            # simulate the ~500ms ramp-up before at_speed flips true.
+            "spindle_changed_at": 0.0,
         }
 
     # ------------------------------------------------------------------
@@ -267,6 +330,13 @@ class MachineBridge:
                     m["program_running"] = False
                     m["program_paused"]  = False
                     m["mode"]            = 1  # back to MANUAL when done
+                    # Implicit M5 at natural program end (safety net for NGC
+                    # files without an explicit M30/M2).
+                    if m["spindle_enabled"]:
+                        m["spindle_speed"]      = 0.0
+                        m["spindle_direction"]  = 0
+                        m["spindle_enabled"]    = False
+                        m["spindle_changed_at"] = now
 
         # Move simulated tool position along the parsed waypoints
         if m["program_running"] or m["program_paused"]:
@@ -280,6 +350,31 @@ class MachineBridge:
                     pos = [wx + off[0], wy + off[1], wz + off[2]] + [0.0] * 6
                     m["pos"] = pos
 
+            # Resolve active tool from parsed M6 events up to current line
+            t_lns = m["program_tool_lines"]
+            if t_lns:
+                ti = bisect.bisect_right(t_lns, m["program_line"]) - 1
+                if ti >= 0:
+                    new_tool = m["program_tool_events"][ti][1]
+                    if new_tool != m["tool_number"]:
+                        m["tool_number"] = new_tool
+
+            # Resolve active spindle state from parsed M3/M4/M5 events
+            s_lns = m["program_spindle_lines"]
+            if s_lns:
+                si = bisect.bisect_right(s_lns, m["program_line"]) - 1
+                if si >= 0:
+                    _, speed, direction = m["program_spindle_events"][si]
+                    signed = speed * direction
+                    # Only bump the "changed at" timestamp when the commanded
+                    # state actually changes — keeps at_speed stable across frames.
+                    if (signed != m["spindle_speed"]
+                            or direction != m["spindle_direction"]):
+                        m["spindle_speed"]      = signed
+                        m["spindle_direction"]  = direction
+                        m["spindle_enabled"]    = direction != 0
+                        m["spindle_changed_at"] = now
+
         # interp_state: 1=IDLE 2=READING 3=PAUSED
         if m["program_running"] and not m["program_paused"]:
             interp_state = 2
@@ -287,6 +382,10 @@ class MachineBridge:
             interp_state = 3
         else:
             interp_state = 1
+
+        # at_speed: stable commanded speed for >= 500ms while enabled.
+        at_speed = (m["spindle_enabled"]
+                    and (now - m["spindle_changed_at"]) >= 0.5)
 
         return {
             "pos": {
@@ -316,12 +415,16 @@ class MachineBridge:
             },
             "overrides": {"feed": m["feed_override"], "rapid": m["rapid_override"]},
             "spindle": [{
-                "speed": 0.0, "direction": 0, "enabled": False,
-                "at_speed": False, "override": m["spindle_override"],
-                "override_enabled": True, "brake": False,
+                "speed":             m["spindle_speed"],
+                "direction":         m["spindle_direction"],
+                "enabled":           m["spindle_enabled"],
+                "at_speed":          at_speed,
+                "override":          m["spindle_override"],
+                "override_enabled":  True,
+                "brake":             False,
             }],
             "coolant": {"flood": m["flood"], "mist": m["mist"]},
-            "tool": {"number": 0, "offset": [0.0] * 9},
+            "tool": {"number": m["tool_number"], "offset": [0.0] * 9},
             "limits": {
                 "min_soft": [False] * 9,
                 "max_soft": [False] * 9,
@@ -457,6 +560,22 @@ class MachineBridge:
         elif op == "spindle_override":
             m["spindle_override"] = max(0.0, float(msg.get("value", 1.0)))
 
+        elif op == "spindle_on":
+            # MDI-driven spindle start. Assume CW unless explicitly reversed.
+            speed     = float(msg.get("speed", 0.0))
+            direction = int(msg.get("direction", 1)) or 1
+            signed    = speed * (1 if direction > 0 else -1)
+            m["spindle_speed"]      = signed
+            m["spindle_direction"]  = 1 if direction > 0 else -1
+            m["spindle_enabled"]    = True
+            m["spindle_changed_at"] = time.time()
+
+        elif op == "spindle_off":
+            m["spindle_speed"]      = 0.0
+            m["spindle_direction"]  = 0
+            m["spindle_enabled"]    = False
+            m["spindle_changed_at"] = time.time()
+
         elif op == "flood_on":  m["flood"] = True
         elif op == "flood_off": m["flood"] = False
         elif op == "mist_on":   m["mist"]  = True
@@ -497,10 +616,14 @@ class MachineBridge:
             m["program_running"] = False
             m["program_paused"]  = False
             m["mode"]            = 1
-            # Parse waypoints and count lines
-            wp, wp_lns = _parse_waypoints(path)
-            m["program_waypoints"]      = wp
-            m["program_waypoint_lines"] = wp_lns
+            # Parse waypoints + tool/spindle events
+            parsed = _parse_program(path)
+            m["program_waypoints"]       = parsed["waypoints"]
+            m["program_waypoint_lines"]  = parsed["waypoint_lines"]
+            m["program_tool_events"]     = parsed["tool_events"]
+            m["program_tool_lines"]      = parsed["tool_lines"]
+            m["program_spindle_events"]  = parsed["spindle_events"]
+            m["program_spindle_lines"]   = parsed["spindle_lines"]
             try:
                 with open(path) as _f:
                     m["program_total_lines"] = sum(1 for _ in _f)
@@ -538,6 +661,11 @@ class MachineBridge:
             m["program_paused"]  = False
             m["program_line"]    = 0
             m["mode"]            = 1  # MANUAL
+            # Spindle stops on program stop (implicit M5); tool stays loaded.
+            m["spindle_speed"]      = 0.0
+            m["spindle_direction"]  = 0
+            m["spindle_enabled"]    = False
+            m["spindle_changed_at"] = time.time()
 
         # All other mock commands are acknowledged but ignored
         return {"ok": True, "mock": True}

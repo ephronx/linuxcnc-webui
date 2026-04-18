@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "server"))
-from bridge import MachineBridge
+from bridge import MachineBridge, _parse_program
 
 
 # ---- Helpers ----
@@ -477,3 +477,195 @@ class TestModalGcodes:
         b = MachineBridge()
         g = _build(b)["modal"]["gcodes"]
         assert g[-1] == -1
+
+
+# ---- Program parser: tool and spindle events ----
+
+def _write_ngc(tmp_path, body):
+    p = tmp_path / "test.ngc"
+    p.write_text(body)
+    return str(p)
+
+
+class TestParseProgramToolEvents:
+    def test_t_then_m6_captures_tool_change(self, tmp_path):
+        path = _write_ngc(tmp_path, "N10 T3 M6\nN20 G0 X0\n")
+        parsed = _parse_program(path)
+        assert parsed["tool_events"] == [(1, 3)]
+
+    def test_bare_m6_uses_previous_t(self, tmp_path):
+        path = _write_ngc(tmp_path, "N10 T2 M6\nN20 M6\n")
+        parsed = _parse_program(path)
+        assert parsed["tool_events"] == [(1, 2), (2, 2)]
+
+    def test_multiple_tool_changes(self, tmp_path):
+        path = _write_ngc(tmp_path, "T1 M6\nG0 X5\nT2 M6\nG0 X10\n")
+        parsed = _parse_program(path)
+        assert parsed["tool_events"] == [(1, 1), (3, 2)]
+
+    def test_t_without_m6_is_not_a_change(self, tmp_path):
+        path = _write_ngc(tmp_path, "T1\nG0 X0\n")
+        parsed = _parse_program(path)
+        assert parsed["tool_events"] == []
+
+    def test_comments_are_stripped(self, tmp_path):
+        path = _write_ngc(tmp_path, "(T99 M6 in a comment)\nT1 M6\n")
+        parsed = _parse_program(path)
+        assert parsed["tool_events"] == [(2, 1)]
+
+
+class TestParseProgramSpindleEvents:
+    def test_s_then_m3_starts_cw(self, tmp_path):
+        path = _write_ngc(tmp_path, "S5000 M3\nG0 X0\n")
+        parsed = _parse_program(path)
+        assert parsed["spindle_events"] == [(1, 5000.0, 1)]
+
+    def test_m4_is_ccw(self, tmp_path):
+        path = _write_ngc(tmp_path, "S3000 M4\n")
+        parsed = _parse_program(path)
+        assert parsed["spindle_events"] == [(1, 3000.0, -1)]
+
+    def test_m5_stops(self, tmp_path):
+        path = _write_ngc(tmp_path, "S4000 M3\nG0 X5\nM5\n")
+        parsed = _parse_program(path)
+        assert parsed["spindle_events"] == [(1, 4000.0, 1), (3, 0.0, 0)]
+
+    def test_m30_implies_m5(self, tmp_path):
+        path = _write_ngc(tmp_path, "S2000 M3\nG0 X1\nM30\n")
+        parsed = _parse_program(path)
+        assert (3, 0.0, 0) in parsed["spindle_events"]
+
+    def test_speed_change_mid_program(self, tmp_path):
+        path = _write_ngc(tmp_path, "S1000 M3\nS2000\nM3\n")
+        parsed = _parse_program(path)
+        # Line 3's M3 re-applies with the updated S word.
+        assert (3, 2000.0, 1) in parsed["spindle_events"]
+
+
+# ---- Program run: tool and spindle resolve from events ----
+
+class TestProgramRunResolvesToolAndSpindle:
+    def _ready(self, tmp_path, body):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        _cmd(b, "home_all")
+        path = _write_ngc(tmp_path, body)
+        _cmd(b, "program_open", path=path)
+        _cmd(b, "program_run")
+        return b
+
+    def test_before_m6_tool_is_zero(self, tmp_path):
+        b = self._ready(tmp_path, "G0 X0\nT1 M6\nG0 X5\n")
+        # Force line=0 (before M6 at line 2) — running state, but parser hasn't
+        # reached the tool change yet.
+        b._mock["program_line"] = 0
+        assert _build(b)["tool"]["number"] == 0
+
+    def test_after_m6_tool_updates(self, tmp_path):
+        b = self._ready(tmp_path, "G0 X0\nT1 M6\nG0 X5\n")
+        b._mock["program_line"] = 2
+        assert _build(b)["tool"]["number"] == 1
+
+    def test_second_tool_change_overrides(self, tmp_path):
+        b = self._ready(tmp_path, "T1 M6\nG0 X1\nT2 M6\nG0 X2\n")
+        b._mock["program_line"] = 3
+        assert _build(b)["tool"]["number"] == 2
+
+    def test_m3_sets_spindle_running_cw(self, tmp_path):
+        b = self._ready(tmp_path, "S4000 M3\nG0 X0\n")
+        b._mock["program_line"] = 1
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is True
+        assert s["speed"] == 4000.0
+        assert s["direction"] == 1
+
+    def test_m4_sets_spindle_ccw_negative_speed(self, tmp_path):
+        b = self._ready(tmp_path, "S3000 M4\n")
+        b._mock["program_line"] = 1
+        s = _build(b)["spindle"][0]
+        assert s["direction"] == -1
+        assert s["speed"] == -3000.0
+
+    def test_m5_stops_spindle(self, tmp_path):
+        b = self._ready(tmp_path, "S5000 M3\nG0 X1\nM5\n")
+        b._mock["program_line"] = 3
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is False
+        assert s["speed"] == 0.0
+
+    def test_tool_persists_after_program_stop(self, tmp_path):
+        b = self._ready(tmp_path, "T7 M6\nG0 X1\n")
+        b._mock["program_line"] = 1
+        _build(b)   # resolve tool=7 while running
+        _cmd(b, "program_stop")
+        # After stop, tool stays loaded (realistic) but spindle is off.
+        assert _build(b)["tool"]["number"] == 7
+        assert _build(b)["spindle"][0]["enabled"] is False
+
+
+# ---- at_speed debounce ----
+
+class TestAtSpeed:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        _cmd(b, "home_all")
+        return b
+
+    def test_at_speed_false_immediately_after_spindle_on(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=2000)
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is True
+        assert s["at_speed"] is False
+
+    def test_at_speed_true_after_ramp(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=2000)
+        # Simulate ramp-up by backdating the change timestamp.
+        b._mock["spindle_changed_at"] -= 1.0
+        assert _build(b)["spindle"][0]["at_speed"] is True
+
+    def test_at_speed_resets_when_spindle_off(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=2000)
+        b._mock["spindle_changed_at"] -= 1.0
+        assert _build(b)["spindle"][0]["at_speed"] is True
+        _cmd(b, "spindle_off")
+        assert _build(b)["spindle"][0]["at_speed"] is False
+
+
+# ---- MDI spindle ops update mock state ----
+
+class TestSpindleMdiOps:
+    def _ready(self):
+        b = MachineBridge()
+        _cmd(b, "estop_reset")
+        _cmd(b, "machine_on")
+        return b
+
+    def test_spindle_on_cw(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=1500, direction=1)
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is True
+        assert s["direction"] == 1
+        assert s["speed"] == 1500.0
+
+    def test_spindle_on_ccw(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=1500, direction=-1)
+        s = _build(b)["spindle"][0]
+        assert s["direction"] == -1
+        assert s["speed"] == -1500.0
+
+    def test_spindle_off_clears(self):
+        b = self._ready()
+        _cmd(b, "spindle_on", speed=2000)
+        _cmd(b, "spindle_off")
+        s = _build(b)["spindle"][0]
+        assert s["enabled"] is False
+        assert s["speed"] == 0.0
+        assert s["direction"] == 0
