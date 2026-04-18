@@ -165,6 +165,8 @@
             <button class="btn btn-default viewer-plane-btn" data-plane="3D" title="3D orbit view — drag to rotate, shift+drag to pan">3D</button>
           </div>
           <button class="btn btn-default" id="btn-viewer-fit" title="Fit to content">⊡ Fit</button>
+          <button class="btn btn-default" id="btn-viewer-clear-trail"
+                  title="Clear motion trail — safe any time, never affects the machine">⌫ Trail</button>
           <div class="viewer-sep"></div>
           <span class="viewer-pos-display">
             <span class="viewer-axis-label" style="color:var(--dro-x)">X</span>
@@ -192,7 +194,11 @@
           <button class="btn btn-primary" id="btn-mdi-send">Send</button>
         </div>
         <div style="flex:1; overflow-y:auto; padding:var(--gap-sm) var(--gap); border-top:1px solid var(--border)">
-          <div class="section-title">History</div>
+          <div class="mdi-history-header">
+            <span class="section-title">History</span>
+            <button class="btn btn-default mdi-history-clear" id="btn-mdi-history-clear"
+                    title="Clear MDI history — safe to press at any time, including during a run">Clear</button>
+          </div>
           <div id="mdi-history" style="font-family:var(--font-mono); font-size:0.75rem; line-height:1.6"></div>
         </div>
       </div>

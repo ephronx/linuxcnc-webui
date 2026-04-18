@@ -36,28 +36,109 @@ document.getElementById("btn-unhome-all")?.addEventListener("click", () => {
 
 const mdiInput   = document.getElementById("mdi-input");
 const mdiHistory = document.getElementById("mdi-history");
-const mdiHistory_ = [];
+const MDI_HISTORY_KEY   = "webui:mdiHistory";
+const MDI_HISTORY_LIMIT = 100;
+
+function _loadHistory() {
+  try {
+    const raw = localStorage.getItem(MDI_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(v => typeof v === "string") : [];
+  } catch {
+    return [];   // private mode, quota, or malformed JSON
+  }
+}
+
+function _saveHistory() {
+  try {
+    localStorage.setItem(MDI_HISTORY_KEY, JSON.stringify(mdiHistory_));
+  } catch {
+    // Storage disabled/full — history still works in-memory for this session.
+  }
+}
+
+const mdiHistory_ = _loadHistory();
+
+function _appendHistoryLine(gcode) {
+  if (!mdiHistory) return;
+  const line = document.createElement("div");
+  line.className   = "mdi-history-entry";
+  line.textContent = `> ${gcode}`;
+  line.title       = "Click to copy to input";
+  line.addEventListener("click", () => {
+    mdiInput.value = gcode;
+    mdiInput.focus();
+    // Place cursor at end so the operator can edit immediately.
+    const n = mdiInput.value.length;
+    mdiInput.setSelectionRange(n, n);
+    _histIdx = -1;   // break out of arrow-key navigation
+    _highlightHistory();
+  });
+  mdiHistory.appendChild(line);
+  mdiHistory.scrollTop = mdiHistory.scrollHeight;
+}
+
+// Visually mark the history entry matching _histIdx (arrow-key navigation).
+// DOM children are 1:1 with mdiHistory_ (newest last); _histIdx=0 is newest.
+function _highlightHistory() {
+  if (!mdiHistory) return;
+  const children = mdiHistory.children;
+  const target   = _histIdx < 0 ? -1 : children.length - 1 - _histIdx;
+  for (let i = 0; i < children.length; i++) {
+    children[i].classList.toggle("selected", i === target);
+  }
+  if (target >= 0) {
+    children[target].scrollIntoView({ block: "nearest" });
+  }
+}
+
+// Re-hydrate visible panel from loaded history
+mdiHistory_.forEach(_appendHistoryLine);
 
 function _sendMDI() {
   const gcode = mdiInput.value.trim();
   if (!gcode) return;
   send({ cmd: "mdi", gcode });
   mdiHistory_.push(gcode);
-  if (mdiHistory_.length > 100) mdiHistory_.shift();
-  if (mdiHistory) {
-    const line = document.createElement("div");
-    line.textContent = `> ${gcode}`;
-    line.style.color = "var(--text-primary)";
-    mdiHistory.appendChild(line);
-    mdiHistory.scrollTop = mdiHistory.scrollHeight;
+  if (mdiHistory_.length > MDI_HISTORY_LIMIT) {
+    mdiHistory_.shift();
+    // Drop the oldest DOM entry to stay in sync with the array.
+    mdiHistory?.firstElementChild?.remove();
   }
+  _appendHistoryLine(gcode);
+  _saveHistory();
   mdiInput.value = "";
+  _histIdx = -1;
+  _highlightHistory();
 }
 
 document.getElementById("btn-mdi-send")?.addEventListener("click", _sendMDI);
 mdiInput?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") _sendMDI();
 });
+
+// Clear button — wipes the visible panel, the in-memory array, and storage.
+// Safe to press at any time including during a run (clears display only,
+// never affects the machine).
+const mdiClearBtn = document.getElementById("btn-mdi-history-clear");
+if (mdiClearBtn) {
+  mdiClearBtn.addEventListener("click", () => {
+    if (mdiHistory_.length === 0) return;   // nothing to clear — no prompt
+    const n = mdiHistory_.length;
+    if (!window.confirm(
+      `Clear all ${n} MDI history ${n === 1 ? "entry" : "entries"}?\n\n` +
+      `This cannot be undone.`
+    )) return;
+    mdiHistory_.length = 0;
+    if (mdiHistory) mdiHistory.innerHTML = "";
+    try { localStorage.removeItem(MDI_HISTORY_KEY); } catch {}
+    _histIdx = -1;
+    _highlightHistory();
+  });
+  // Never gated by machine state — pure display action.
+  mdiClearBtn.disabled = false;
+}
 
 // MDI history navigation (up/down arrows)
 let _histIdx = -1;
@@ -66,12 +147,16 @@ mdiInput?.addEventListener("keydown", (e) => {
     e.preventDefault();
     _histIdx = Math.min(_histIdx + 1, mdiHistory_.length - 1);
     mdiInput.value = mdiHistory_[mdiHistory_.length - 1 - _histIdx] ?? "";
+    _highlightHistory();
   } else if (e.key === "ArrowDown") {
     e.preventDefault();
     _histIdx = Math.max(_histIdx - 1, -1);
     mdiInput.value = _histIdx === -1 ? "" : (mdiHistory_[mdiHistory_.length - 1 - _histIdx] ?? "");
-  } else {
+    _highlightHistory();
+  } else if (e.key !== "Enter") {
+    // Any other key (user is typing) breaks out of navigation.
     _histIdx = -1;
+    _highlightHistory();
   }
 });
 

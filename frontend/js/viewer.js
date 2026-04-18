@@ -21,7 +21,8 @@ const canvas   = document.getElementById("viewer-canvas");
 const vposX    = document.getElementById("vpos-x");
 const vposY    = document.getElementById("vpos-y");
 const vposZ    = document.getElementById("vpos-z");
-const fitBtn   = document.getElementById("btn-viewer-fit");
+const fitBtn        = document.getElementById("btn-viewer-fit");
+const clearTrailBtn = document.getElementById("btn-viewer-clear-trail");
 const statusEl = document.getElementById("viewer-status");
 
 if (!canvas) throw new Error("viewer-canvas not found");
@@ -856,6 +857,13 @@ document.querySelectorAll(".viewer-plane-btn").forEach(btn => {
 
 fitBtn?.addEventListener("click", () => {
   _fitToContent();
+  _scheduleRender();
+});
+
+// Clear motion trail — wipes _toolTrail only. Does NOT affect the loaded
+// toolpath render or machine state. Safe any time, including during a run.
+clearTrailBtn?.addEventListener("click", () => {
+  _toolTrail = [];
   _scheduleRender();
 });
 
