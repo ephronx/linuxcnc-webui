@@ -73,9 +73,24 @@ function _appendHistoryLine(gcode) {
     const n = mdiInput.value.length;
     mdiInput.setSelectionRange(n, n);
     _histIdx = -1;   // break out of arrow-key navigation
+    _highlightHistory();
   });
   mdiHistory.appendChild(line);
   mdiHistory.scrollTop = mdiHistory.scrollHeight;
+}
+
+// Visually mark the history entry matching _histIdx (arrow-key navigation).
+// DOM children are 1:1 with mdiHistory_ (newest last); _histIdx=0 is newest.
+function _highlightHistory() {
+  if (!mdiHistory) return;
+  const children = mdiHistory.children;
+  const target   = _histIdx < 0 ? -1 : children.length - 1 - _histIdx;
+  for (let i = 0; i < children.length; i++) {
+    children[i].classList.toggle("selected", i === target);
+  }
+  if (target >= 0) {
+    children[target].scrollIntoView({ block: "nearest" });
+  }
 }
 
 // Re-hydrate visible panel from loaded history
@@ -94,6 +109,8 @@ function _sendMDI() {
   _appendHistoryLine(gcode);
   _saveHistory();
   mdiInput.value = "";
+  _histIdx = -1;
+  _highlightHistory();
 }
 
 document.getElementById("btn-mdi-send")?.addEventListener("click", _sendMDI);
@@ -111,6 +128,7 @@ if (mdiClearBtn) {
     if (mdiHistory) mdiHistory.innerHTML = "";
     try { localStorage.removeItem(MDI_HISTORY_KEY); } catch {}
     _histIdx = -1;
+    _highlightHistory();
   });
   // Never gated by machine state — pure display action.
   mdiClearBtn.disabled = false;
@@ -123,12 +141,16 @@ mdiInput?.addEventListener("keydown", (e) => {
     e.preventDefault();
     _histIdx = Math.min(_histIdx + 1, mdiHistory_.length - 1);
     mdiInput.value = mdiHistory_[mdiHistory_.length - 1 - _histIdx] ?? "";
+    _highlightHistory();
   } else if (e.key === "ArrowDown") {
     e.preventDefault();
     _histIdx = Math.max(_histIdx - 1, -1);
     mdiInput.value = _histIdx === -1 ? "" : (mdiHistory_[mdiHistory_.length - 1 - _histIdx] ?? "");
-  } else {
+    _highlightHistory();
+  } else if (e.key !== "Enter") {
+    // Any other key (user is typing) breaks out of navigation.
     _histIdx = -1;
+    _highlightHistory();
   }
 });
 

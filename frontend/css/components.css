@@ -226,10 +226,16 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
   padding: 0 var(--gap-sm);
   border-radius: var(--radius);
+  border-left: 2px solid transparent;   /* reserves space so .selected doesn't shift layout */
 }
 .mdi-history-entry:hover {
   background: var(--bg-3);
   color: var(--accent);
+}
+.mdi-history-entry.selected {
+  background: var(--bg-3);
+  color: var(--accent);
+  border-left-color: var(--accent);
 }
 
 /* MDI history header row — section title + Clear button. */
