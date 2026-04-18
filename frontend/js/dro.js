@@ -99,7 +99,10 @@ function _buildTouchOff(axes) {
     inp.type = "number";
     inp.value = "0";
     inp.step = "0.001";
-    inp.style.cssText = "flex:1; font-family:var(--font-mono); font-size:0.8rem; padding:0.3rem 0.5rem; background:var(--bg-3); border:1px solid var(--border-hi); border-radius:var(--radius); color:var(--text-primary); outline:none";
+    // min-width:0 lets flexbox shrink the input below its ~150px browser
+    // default; otherwise the sibling Zero button gets pushed off the right
+    // edge of a narrow aside.
+    inp.style.cssText = "flex:1; min-width:0; font-family:var(--font-mono); font-size:0.8rem; padding:0.3rem 0.5rem; background:var(--bg-3); border:1px solid var(--border-hi); border-radius:var(--radius); color:var(--text-primary); outline:none";
     inp.id = `touch-off-${i}`;
     inp.title = `Target value for ${axisName} after zero (default 0 = "this position is zero").\nChange only if you need a specific reference other than zero.`;
     // No live tracking — the DRO rows above already show the live position.
@@ -108,6 +111,7 @@ function _buildTouchOff(axes) {
     const btn = document.createElement("button");
     btn.className = "btn btn-warn";
     btn.textContent = "Zero";
+    btn.style.flexShrink = "0";   // defensive — never let the Zero button shrink out of view
     btn.dataset.axis = i;
     btn.dataset.axisName = axisName;
     btn.addEventListener("click", () => {
