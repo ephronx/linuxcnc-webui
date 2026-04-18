@@ -707,29 +707,27 @@ function _drawGrid3D() {
 
 function _drawBounds3D() {
   if (!_bounds) return;
-  const [x0, x1] = _bounds.X, [y0, y1] = _bounds.Y, [z0, z1] = _bounds.Z;
-
-  // 8 corners of the machine envelope
-  const c = [
-    [x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],
-    [x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],
-  ].map(([x,y,z]) => _project3d(x, y, z));
-
-  const edges = [
-    [0,1],[1,2],[2,3],[3,0],   // Z-min face
-    [4,5],[5,6],[6,7],[7,4],   // Z-max face
-    [0,4],[1,5],[2,6],[3,7],   // verticals
-  ];
+  const [x0, x1] = _bounds.X, [y0, y1] = _bounds.Y;
+  // Machine envelopes are typically ~200 mm deep in Z, but parts are often
+  // <10 mm. Drawing the full 3D box pushes its bottom face off-screen at
+  // fit-to-part zoom. Instead draw the envelope as a flat rectangle on the
+  // workpiece plane (WCS Z=0) — matches the 2D XY view and always stays
+  // near the toolpath.
+  const z = _wcsOffset[2];
+  const corners = [
+    [x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z],
+  ].map(([x, y, zz]) => _project3d(x, y, zz));
 
   ctx.save();
-  ctx.setLineDash([4, 4]);
-  ctx.lineWidth = 1.2;
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 1.5;
   ctx.strokeStyle = C.textSec;
   ctx.beginPath();
-  for (const [a, b] of edges) {
-    ctx.moveTo(c[a].sx, c[a].sy);
-    ctx.lineTo(c[b].sx, c[b].sy);
+  ctx.moveTo(corners[0].sx, corners[0].sy);
+  for (let i = 1; i < corners.length; i++) {
+    ctx.lineTo(corners[i].sx, corners[i].sy);
   }
+  ctx.closePath();
   ctx.stroke();
   ctx.restore();
 }
