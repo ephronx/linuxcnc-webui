@@ -124,6 +124,12 @@ mdiInput?.addEventListener("keydown", (e) => {
 const mdiClearBtn = document.getElementById("btn-mdi-history-clear");
 if (mdiClearBtn) {
   mdiClearBtn.addEventListener("click", () => {
+    if (mdiHistory_.length === 0) return;   // nothing to clear — no prompt
+    const n = mdiHistory_.length;
+    if (!window.confirm(
+      `Clear all ${n} MDI history ${n === 1 ? "entry" : "entries"}?\n\n` +
+      `This cannot be undone.`
+    )) return;
     mdiHistory_.length = 0;
     if (mdiHistory) mdiHistory.innerHTML = "";
     try { localStorage.removeItem(MDI_HISTORY_KEY); } catch {}

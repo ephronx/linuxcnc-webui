@@ -39,8 +39,9 @@ const NEVER_GATE = [
   "#btn-estop",               // always reachable (safety)
   "#btn-prog-open",           // file selection is harmless
   "#btn-browse",               // file selection is harmless
-  "#btn-viewer-fit",          // camera control
-  "#btn-mdi-history-clear",   // client-side display clear — never affects machine
+  "#btn-viewer-fit",             // camera control
+  "#btn-viewer-clear-trail",     // clears live motion trail only — never affects machine
+  "#btn-mdi-history-clear",      // client-side display clear — never affects machine
 ].join(", ");
 
 // ---- Helpers ----
@@ -85,7 +86,7 @@ function _reEnableNav() {
   // Split into individual selectors to avoid :not() list compatibility issues
   [".tab-btn", ".viewer-plane-btn", ".strip-mode-btn",
    "#btn-estop", "#btn-prog-open", "#btn-browse", "#btn-viewer-fit",
-   "#btn-mdi-history-clear"].forEach(sel => {
+   "#btn-viewer-clear-trail", "#btn-mdi-history-clear"].forEach(sel => {
     document.querySelectorAll(sel).forEach(el => { el.disabled = false; el.title = ""; });
   });
 }
