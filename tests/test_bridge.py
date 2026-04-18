@@ -726,11 +726,20 @@ class TestMdiMotion:
         assert s[0] == pytest.approx(100.0)
         assert s[1] == pytest.approx(50.0)
 
-    def test_g53_bypasses_wcs_offset(self):
+    def test_g53_moves_in_machine_coords(self):
         b = self._ready()
-        b._mock["g5x_offsets"][1] = [100.0, 50.0, 0.0, 0, 0, 0, 0, 0, 0]
+        # G54 work zero is at machine (100, 50, 10). Without G53 a "G0 Z0"
+        # would land at machine Z=10. With G53 it must land at machine Z=0.
+        b._mock["g5x_offsets"][1] = [100.0, 50.0, 10.0, 0, 0, 0, 0, 0, 0]
         _cmd(b, "mdi", gcode="G53 G0 Z0")
         assert _build(b)["pos"]["actual"][2] == pytest.approx(0.0)
+
+    def test_non_g53_move_respects_wcs_offset(self):
+        """Sanity: the strengthened G53 test needs its WCS counterpart."""
+        b = self._ready()
+        b._mock["g5x_offsets"][1] = [100.0, 50.0, 10.0, 0, 0, 0, 0, 0, 0]
+        _cmd(b, "mdi", gcode="G0 Z0")   # no G53 → WCS-relative
+        assert _build(b)["pos"]["actual"][2] == pytest.approx(10.0)
 
     def test_g20_imperial_scales_input(self):
         b = self._ready()
