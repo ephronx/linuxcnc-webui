@@ -43,6 +43,7 @@ const NEVER_GATE = [
   "#btn-viewer-reset",           // camera control — default orbit + fit
   "#btn-viewer-clear-trail",     // clears live motion trail only — never affects machine
   "#btn-mdi-history-clear",      // client-side display clear — never affects machine
+  "#btn-settings-reset",         // clears client-side UI prefs only — never affects machine
 ].join(", ");
 
 // ---- Helpers ----
@@ -88,7 +89,7 @@ function _reEnableNav() {
   [".tab-btn", ".viewer-plane-btn", ".strip-mode-btn",
    "#btn-estop", "#btn-prog-open", "#btn-browse", "#btn-viewer-fit",
    "#btn-viewer-reset", "#btn-viewer-clear-trail",
-   "#btn-mdi-history-clear"].forEach(sel => {
+   "#btn-mdi-history-clear", "#btn-settings-reset"].forEach(sel => {
     document.querySelectorAll(sel).forEach(el => { el.disabled = false; el.title = ""; });
   });
 }
