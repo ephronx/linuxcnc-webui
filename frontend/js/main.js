@@ -6,6 +6,7 @@
 
 import { send } from "./ws.js";
 import { state, onUpdate } from "./state.js";
+import * as prefs from "./prefs.js";
 
 // ---- Machine control ----
 
@@ -36,29 +37,16 @@ document.getElementById("btn-unhome-all")?.addEventListener("click", () => {
 
 const mdiInput   = document.getElementById("mdi-input");
 const mdiHistory = document.getElementById("mdi-history");
-const MDI_HISTORY_KEY   = "webui:mdiHistory";
+const MDI_HISTORY_PREF  = "mdi.history";
 const MDI_HISTORY_LIMIT = 100;
 
-function _loadHistory() {
-  try {
-    const raw = localStorage.getItem(MDI_HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(v => typeof v === "string") : [];
-  } catch {
-    return [];   // private mode, quota, or malformed JSON
-  }
-}
-
 function _saveHistory() {
-  try {
-    localStorage.setItem(MDI_HISTORY_KEY, JSON.stringify(mdiHistory_));
-  } catch {
-    // Storage disabled/full — history still works in-memory for this session.
-  }
+  prefs.set(MDI_HISTORY_PREF, mdiHistory_);
 }
 
-const mdiHistory_ = _loadHistory();
+// Copy of the stored history — we mutate this array in place, then persist.
+const mdiHistory_ = [...prefs.get(MDI_HISTORY_PREF, [])]
+  .filter(v => typeof v === "string");
 
 function _appendHistoryLine(gcode) {
   if (!mdiHistory) return;
@@ -132,7 +120,7 @@ if (mdiClearBtn) {
     )) return;
     mdiHistory_.length = 0;
     if (mdiHistory) mdiHistory.innerHTML = "";
-    try { localStorage.removeItem(MDI_HISTORY_KEY); } catch {}
+    prefs.reset(MDI_HISTORY_PREF);
     _histIdx = -1;
     _highlightHistory();
   });
@@ -229,9 +217,9 @@ onUpdate((s) => {
 // ---- Viewer / panel-below splitter ----
 // Lets the operator resize the toolpath viewer vs the gcode listing / MDI
 // history / auto controls below it. Persists the chosen height in
-// localStorage. Double-click returns to the default flex ratio.
+// prefs. Double-click returns to the default flex ratio.
 
-const VIEWER_HEIGHT_KEY = "webui:viewerHeightPx";
+const VIEWER_HEIGHT_PREF = "viewer.splitterHeightPx";
 const splitter      = document.getElementById("viewer-splitter");
 const sharedViewer  = document.getElementById("shared-viewer");
 const panelMain     = document.getElementById("panel-main");
@@ -246,17 +234,14 @@ function _applyViewerHeight(px) {
 function _resetViewerHeight() {
   if (!sharedViewer) return;
   sharedViewer.style.flex = "";   // revert to stylesheet default (3 1 0)
-  try { localStorage.removeItem(VIEWER_HEIGHT_KEY); } catch {}
+  prefs.reset(VIEWER_HEIGHT_PREF);
 }
 
 // Restore any previously saved height on load.
-try {
-  const saved = localStorage.getItem(VIEWER_HEIGHT_KEY);
-  if (saved) {
-    const px = parseInt(saved, 10);
-    if (Number.isFinite(px) && px > 0) _applyViewerHeight(px);
-  }
-} catch {}
+const savedHeight = prefs.get(VIEWER_HEIGHT_PREF);
+if (Number.isFinite(savedHeight) && savedHeight > 0) {
+  _applyViewerHeight(savedHeight);
+}
 
 if (splitter && sharedViewer && panelMain) {
   let dragging = false;
@@ -290,7 +275,7 @@ if (splitter && sharedViewer && panelMain) {
     splitter.releasePointerCapture?.(e.pointerId);
     // Persist final height.
     const h = sharedViewer.getBoundingClientRect().height;
-    try { localStorage.setItem(VIEWER_HEIGHT_KEY, String(Math.round(h))); } catch {}
+    prefs.set(VIEWER_HEIGHT_PREF, Math.round(h));
   };
   splitter.addEventListener("pointerup",     _endDrag);
   splitter.addEventListener("pointercancel", _endDrag);
