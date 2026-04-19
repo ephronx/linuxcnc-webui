@@ -644,32 +644,6 @@ input[type="range"]::-moz-range-thumb {
 .strip-rpm-dot.at-speed { background: var(--green, #22c55e); box-shadow: 0 0 4px var(--green, #22c55e); }
 .strip-rpm-dot.hidden   { visibility: hidden; }
 
-/* ---- Settings tab (Phase 7a: read-only prefs display) ---- */
-.settings-group-title {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin: var(--gap) 0 0.25rem;
-  padding-bottom: 0.15rem;
-  border-bottom: 1px solid var(--border);
-}
-.settings-group-title:first-child { margin-top: 0; }
-
-.settings-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--gap);
-  padding: 0.3rem 0;
-  font-size: 0.78rem;
-  border-bottom: 1px dotted var(--border);
-}
-.settings-row:last-child { border-bottom: none; }
-.settings-key   { color: var(--text-primary); }
-.settings-value { color: var(--text-secondary); }
-
 /* On compact layouts, shrink further and hide the secondary coord line. */
 @media (max-width: 899px) {
   #persistent-strip {

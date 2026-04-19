@@ -296,21 +296,26 @@
 
       <!-- ══════════════════════════════════════════════════════════
            Settings — full panel, replaces viewer when active.
-           Phase 7a: read-only display of current UI preferences.
-           User-facing editable settings land in Phase 7b+.
+           Phase 7a: shell only. Each editable setting (theme, HAL poll
+           rates, viewer defaults, etc.) will render its own control
+           into this tab in Phase 7b and beyond.
       ══════════════════════════════════════════════════════════ -->
       <div class="tab-panel tab-panel-full" id="tab-panel-settings">
         <div class="panel-section" style="flex:1; overflow-y:auto">
-          <div class="section-title">UI Preferences</div>
+          <div class="section-title">Settings</div>
           <p class="dim" style="font-size:0.72rem; margin-bottom:var(--gap)">
-            Persisted automatically as you use the app. Editable controls and
-            additional settings (theme, poll rates, etc.) land in later phases.
+            Editable settings arrive in later phases — theme, HAL monitor
+            poll rates, viewer defaults, and so on.
           </p>
-          <div id="settings-prefs-list"></div>
+          <p class="dim" style="font-size:0.72rem">
+            Use <em>Reset UI Preferences</em> below to clear stored UI state
+            (MDI history, viewer layout) if the UI gets into an unexpected
+            state.
+          </p>
         </div>
         <div class="panel-section" style="flex-shrink:0">
           <button class="btn btn-warn" id="btn-settings-reset"
-                  title="Clear all stored UI preferences (MDI history, viewer layout, etc.)">
+                  title="Clear stored UI state (MDI history, viewer layout, etc.)">
             Reset UI Preferences
           </button>
         </div>
