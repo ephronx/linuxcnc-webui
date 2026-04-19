@@ -61,7 +61,14 @@ const C = {
 let _plane    = "XY";
 let _segments = [];
 let _extents  = null;   // {minU,maxU,minV,maxV} in WCS (add _wcsOffset to get machine coords)
-let _bounds   = null;   // machine limits {X:[min,max], Y:[min,max], Z:[min,max]}
+// Machine envelope. Initialised to sensible small-mill defaults so the
+// very first fit-to-content always includes the envelope — on F5 with
+// warm cache, segments can arrive before /config does, and a null
+// bounds at that point leaves the camera zoomed tight on the part,
+// pushing the envelope off-screen even after onConfig later populates
+// it. onConfig replaces these defaults with real INI values when
+// available.
+let _bounds   = { X: [0, 300], Y: [0, 200], Z: [-200, 0] };
 let _toolPos   = [0, 0, 0];  // machine coordinates (for viewer crosshair drawing)
 let _toolTrail = [];         // recent tool positions [[x,y,z], …] newest at end
 const TRAIL_MAX = 80;        // ~4 s of history at 20 Hz
