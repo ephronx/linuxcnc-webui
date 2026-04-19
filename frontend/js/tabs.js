@@ -21,11 +21,12 @@
 const VIEWER_TABS = new Set(["manual", "mdi", "auto"]);
 
 // Tabs that have a control strip below the canvas (all viewer tabs now do)
-// manual  → gcode listing + drop zone
-// mdi     → MDI input bar + history
-// auto    → program controls (run/pause/stop/…)
-// offsets → full panel (replaces viewer)
-// status  → full panel (replaces viewer)
+// manual   → gcode listing + drop zone
+// mdi      → MDI input bar + history
+// auto     → program controls (run/pause/stop/…)
+// offsets  → full panel (replaces viewer)
+// status   → full panel (replaces viewer)
+// settings → full panel (replaces viewer)
 
 const tabBar        = document.getElementById("tab-bar");
 const sharedViewer  = document.getElementById("shared-viewer");

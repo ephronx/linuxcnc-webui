@@ -288,6 +288,23 @@ Get the data flowing and commands working. UI can be ugly.
 
 ---
 
+### Phase 7a — Preferences infrastructure ✅ COMPLETE
+
+Client-side preferences module and Settings tab shell. The webui is installed
+per-machine PC, so localStorage is sufficient — no server-side persistence.
+Future tunables (HAL monitor poll rates, theme, viewer defaults) live in this
+blob; backend-affecting values are passed on the relevant WS/REST call rather
+than persisted server-side.
+
+- [x] `frontend/js/prefs.js` — unified `get/set/reset/clear/all` API
+- [x] Single `webui:prefs` blob replaces scattered per-feature localStorage keys
+- [x] Legacy key migration (idempotent): `webui:mdiHistory` → `mdi.history`, `webui:viewerHeightPx` → `viewer.splitterHeightPx`
+- [x] Settings tab — full-panel tab, read-only list grouped by key prefix
+- [x] "Reset UI Preferences" button with confirm dialog, clears blob + reloads
+- [x] `tests/test_prefs.mjs` — Node-based unit tests for API + migration (14/14 passing)
+
+---
+
 ### Phase 7 — Settings tab
 
 - [ ] Keyboard mapping reference display (QtDragon shows ESC/F1/F2/F11/F12/Home/Pause)

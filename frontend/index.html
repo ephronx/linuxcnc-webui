@@ -149,6 +149,7 @@
         <button class="tab-btn" data-tab="auto">Auto</button>
         <button class="tab-btn" data-tab="offsets">Offsets</button>
         <button class="tab-btn" data-tab="status">Status</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
@@ -290,6 +291,28 @@
         <div class="panel-section">
           <div class="section-title">Error Log</div>
           <div id="error-log" style="font-size:0.72rem; line-height:1.5; color:var(--red); max-height:8rem; overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           Settings — full panel, replaces viewer when active.
+           Phase 7a: read-only display of current UI preferences.
+           User-facing editable settings land in Phase 7b+.
+      ══════════════════════════════════════════════════════════ -->
+      <div class="tab-panel tab-panel-full" id="tab-panel-settings">
+        <div class="panel-section" style="flex:1; overflow-y:auto">
+          <div class="section-title">UI Preferences</div>
+          <p class="dim" style="font-size:0.72rem; margin-bottom:var(--gap)">
+            Persisted automatically as you use the app. Editable controls and
+            additional settings (theme, poll rates, etc.) land in later phases.
+          </p>
+          <div id="settings-prefs-list"></div>
+        </div>
+        <div class="panel-section" style="flex-shrink:0">
+          <button class="btn btn-warn" id="btn-settings-reset"
+                  title="Clear all stored UI preferences (MDI history, viewer layout, etc.)">
+            Reset UI Preferences
+          </button>
         </div>
       </div>
 
@@ -454,5 +477,6 @@
 <script type="module" src="/static/js/viewer.js"></script>
 <script type="module" src="/static/js/guards.js"></script>
 <script type="module" src="/static/js/modal.js"></script>
+<script type="module" src="/static/js/settings.js"></script>
 </body>
 </html>
